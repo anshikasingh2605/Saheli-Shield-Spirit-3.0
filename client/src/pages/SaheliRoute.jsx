@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import LeafletRouteMap from "../components/LeafletRouteMap";
 import {
   MapPin,
@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import api from "../services/api";
+import { Star, MapPinned } from "lucide-react";
 
 const geocodePlace = async (place) => {
   const response = await fetch(
@@ -51,6 +52,16 @@ export default function SaheliRoute() {
   const [journeyStatus, setJourneyStatus] = useState("idle");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [tracking, setTracking] = useState(false);
+  const [locationStatus, setLocationStatus] = useState("Location sharing is off.");
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const locationWatchIdRef = useRef(null);
+  const lastLocationSentRef = useRef(0);
+  const [etaMinutes, setEtaMinutes] = useState(15);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [feedbackItems, setFeedbackItems] = useState([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   const getError = (err) =>
     err.response?.data?.message ||
@@ -82,6 +93,132 @@ export default function SaheliRoute() {
   useEffect(() => {
     loadActiveJourney();
   }, []);
+
+  // Restore route geometry when available on the saved journey.
+  const refreshRouteFeedback = async (routeRef) => {
+    if (!routeRef) return;
+    try {
+      const response = await api.get("/routes/feedback", { params: { routeRef, limit: 10 } });
+      const items = response.data?.data;
+      setFeedbackItems(Array.isArray(items) ? items : []);
+    } catch (err) {
+      console.warn("Could not load route feedback", err);
+    }
+  };
+
+  const stopLocationTracking = () => {
+    if (locationWatchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      locationWatchIdRef.current = null;
+    }
+    setTracking(false);
+    setLocationStatus("Location sharing is paused.");
+  };
+
+  const startLocationTracking = () => {
+    if (!activeJourney?._id) {
+      setLocationStatus("Start a journey before sharing live location.");
+      return;
+    }
+    if (!navigator.geolocation) {
+      setLocationStatus("This browser does not support geolocation.");
+      return;
+    }
+    if (!window.isSecureContext) {
+      setLocationStatus("Location requires HTTPS or localhost.");
+      return;
+    }
+
+    if (locationWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(locationWatchIdRef.current);
+    }
+
+    setError("");
+    setLocationStatus("Waiting for browser location permission...");
+    locationWatchIdRef.current = navigator.geolocation.watchPosition(
+      async (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: new Date(position.timestamp).toISOString(),
+          isSimulated: false,
+        };
+        setCurrentLocation(location);
+        setLocationStatus(`Location available (accuracy ±${Math.round(location.accuracy)} m).`);
+
+        const now = Date.now();
+        if (now - lastLocationSentRef.current < 10000) return;
+        lastLocationSentRef.current = now;
+
+        try {
+          await api.patch(`/journeys/${activeJourney._id}/location`, location);
+          setLocationStatus(`Live location shared at ${new Date().toLocaleTimeString()}.`);
+        } catch (err) {
+          setLocationStatus("Location was detected, but the server could not save it.");
+          setError(getError(err));
+        }
+      },
+      (geoError) => {
+        const messages = {
+          1: "Location permission denied. Allow Location for this site in browser settings, then try again.",
+          2: "Your location could not be determined. Check device location/GPS and network.",
+          3: "Location request timed out. Try enabling location again.",
+        };
+        setLocationStatus(messages[geoError.code] || `Location error: ${geoError.message}`);
+        setTracking(false);
+        if (locationWatchIdRef.current !== null) {
+          navigator.geolocation.clearWatch(locationWatchIdRef.current);
+          locationWatchIdRef.current = null;
+        }
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+    );
+    setTracking(true);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (locationWatchIdRef.current !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      }
+    };
+  }, []);
+
+  const extendEta = async () => {
+    if (!activeJourney?._id) return;
+    setJourneyLoading(true); setError(""); setNotice("");
+    try {
+      const response = await api.patch(`/journeys/${activeJourney._id}/extend`, { additionalMinutes: Number(etaMinutes) });
+      const updated = response.data?.data;
+      setActiveJourney((current) => current ? { ...current, eta: updated?.eta || current.eta, extendedMinutes: updated?.extendedMinutes ?? current.extendedMinutes } : current);
+      setNotice(`ETA extended by ${etaMinutes} minutes.`);
+    } catch (err) { setError(getError(err)); }
+    finally { setJourneyLoading(false); }
+  };
+
+  const submitRouteFeedback = async (event) => {
+    event.preventDefault();
+    if (!selectedRoute?.routeId) { setError("Select a route before submitting feedback."); return; }
+    setFeedbackLoading(true); setError(""); setNotice("");
+    try {
+      await api.post("/routes/feedback", {
+        journeyId: activeJourney?._id || undefined,
+        routeRef: selectedRoute.routeId,
+        originLabel: originPoint?.label || start,
+        destinationLabel: destinationPoint?.label || destination,
+        rating: Number(feedbackRating),
+        comment: feedbackComment.trim(),
+        safetyTags: [],
+        timeOfDay: new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening",
+        travelDurationMinutes: Number(selectedRoute.durationMinutes) || 0,
+      });
+      setFeedbackComment("");
+      setNotice("Thank you. Your route feedback was submitted.");
+      await refreshRouteFeedback(selectedRoute.routeId);
+    } catch (err) { setError(getError(err)); }
+    finally { setFeedbackLoading(false); }
+  };
 
   const handleFindRoutes = async (event) => {
     event.preventDefault();
@@ -196,8 +333,10 @@ export default function SaheliRoute() {
     try {
       await api.post(`/journeys/${activeJourney._id}/complete`);
 
+      stopLocationTracking();
       setActiveJourney(null);
       setJourneyStatus("completed");
+      if (selectedRoute?.routeId) await refreshRouteFeedback(selectedRoute.routeId);
       setNotice("Journey completed and updated in the backend.");
     } catch (err) {
       setError(getError(err));
@@ -388,7 +527,7 @@ export default function SaheliRoute() {
                   <button
                     type="button"
                     key={routeOption.routeId || index}
-                    onClick={() => setSelectedRoute(routeOption)}
+                    onClick={() => { setSelectedRoute(routeOption); refreshRouteFeedback(routeOption.routeId); }}
                     disabled={journeyStatus === "active"}
                     className={`w-full rounded-xl border p-4 text-left transition ${
                       selectedRoute === routeOption
@@ -429,9 +568,13 @@ export default function SaheliRoute() {
                         {formatDuration(routeOption.durationMinutes)}
                       </span>
 
-                      {routeOption.safetyScore != null && (
+                      {Number.isFinite(Number(routeOption.safetyScore)) && routeOption.safetyScore !== null ? (
                         <span className="font-medium text-emerald-700">
                           Safety score: {routeOption.safetyScore}/10
+                        </span>
+                      ) : (
+                        <span className="font-medium text-amber-700">
+                          Safety score unavailable · insufficient verified data
                         </span>
                       )}
                     </div>
@@ -514,6 +657,23 @@ export default function SaheliRoute() {
             </div>
 
             {journeyStatus === "active" && (
+              <div className="mt-4 space-y-3">
+                <button type="button" onClick={tracking ? stopLocationTracking : startLocationTracking} className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold ${tracking ? "bg-amber-100 text-amber-800" : "border border-slate-200 text-slate-700 hover:bg-slate-50"}`}>
+                  <MapPinned size={18} /> {tracking ? "Pause live location tracking" : "Enable live location tracking"}
+                </button>
+                <p role="status" aria-live="polite" className="text-sm text-slate-600">{locationStatus}</p>
+                {currentLocation && <p className="text-xs text-slate-500">Last GPS fix: {new Date(currentLocation.timestamp).toLocaleTimeString()} · {currentLocation.lat.toFixed(5)}, {currentLocation.lng.toFixed(5)}</p>}
+                <div className="flex gap-2">
+                  <select value={etaMinutes} onChange={(e) => setEtaMinutes(Number(e.target.value))} className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    <option value={15}>Extend ETA by 15 min</option><option value={30}>Extend ETA by 30 min</option><option value={60}>Extend ETA by 60 min</option><option value={120}>Extend ETA by 120 min</option>
+                  </select>
+                  <button type="button" onClick={extendEta} disabled={journeyLoading} className="rounded-xl bg-violet-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Extend ETA</button>
+                </div>
+                {activeJourney?.eta && <p className="text-sm text-slate-500">Expected arrival: {new Date(activeJourney.eta).toLocaleString()}</p>}
+              </div>
+            )}
+
+            {journeyStatus === "active" && (
               <button
                 type="button"
                 onClick={completeJourney}
@@ -562,6 +722,20 @@ export default function SaheliRoute() {
               </p>
             </div>
           </section>
+
+          {selectedRoute && (
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="mb-4 flex items-center gap-2"><Star className="text-amber-500" size={20} /><h3 className="font-semibold text-slate-900">Route feedback</h3></div>
+              <form onSubmit={submitRouteFeedback} className="space-y-3">
+                <label className="block text-sm font-medium text-slate-700">Your rating</label>
+                <select value={feedbackRating} onChange={(e) => setFeedbackRating(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 px-3 py-2"><option value={5}>5 - Excellent</option><option value={4}>4 - Good</option><option value={3}>3 - Average</option><option value={2}>2 - Poor</option><option value={1}>1 - Very poor</option></select>
+                <textarea value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} maxLength={1000} rows={3} placeholder="Share helpful details about this route (optional)" className="w-full rounded-xl border border-slate-200 p-3 text-sm" />
+                <button disabled={feedbackLoading} className="w-full rounded-xl bg-violet-700 px-4 py-3 font-semibold text-white disabled:opacity-50">{feedbackLoading ? "Submitting..." : "Submit route feedback"}</button>
+              </form>
+              <p className="mt-3 text-xs leading-5 text-slate-500">Community feedback is informational and is not a guarantee of route safety.</p>
+              {feedbackItems.length > 0 && <div className="mt-4 space-y-3 border-t border-slate-100 pt-4"><h4 className="text-sm font-semibold">Recent feedback</h4>{feedbackItems.map((item) => <div key={item._id} className="rounded-xl bg-slate-50 p-3"><p className="text-sm font-medium">{item.authorName || "Traveller"} · {item.rating}/5</p>{item.comment && <p className="mt-1 text-sm text-slate-600">{item.comment}</p>}<p className="mt-1 text-xs text-slate-400">{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ""}</p></div>)}</div>}
+            </section>
+          )}
         </div>
       </div>
     </div>
