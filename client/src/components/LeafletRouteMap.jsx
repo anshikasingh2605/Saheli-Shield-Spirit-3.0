@@ -19,7 +19,7 @@ function getRouteCoordinates(route) {
   return [];
 }
 
-export default function LeafletRouteMap({ originPoint, destinationPoint, routes = [], selectedRoute }) {
+export default function LeafletRouteMap({ originPoint, destinationPoint, routes = [], selectedRoute, currentLocation }) {
   const [map, setMap] = useState(null);
   const { isLoaded, loadError } = useJsApiLoader({
     id: "saheli-google-map",
@@ -48,6 +48,14 @@ export default function LeafletRouteMap({ originPoint, destinationPoint, routes 
     <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={8} onLoad={setMap} onUnmount={() => setMap(null)} options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: true }}>
       {originPoint && <Marker position={{ lat: Number(originPoint.lat), lng: Number(originPoint.lng) }} label="A" />}
       {destinationPoint && <Marker position={{ lat: Number(destinationPoint.lat), lng: Number(destinationPoint.lng) }} label="B" />}
+      {currentLocation && Number.isFinite(Number(currentLocation.lat)) && Number.isFinite(Number(currentLocation.lng)) && (
+        <Marker
+          position={{ lat: Number(currentLocation.lat), lng: Number(currentLocation.lng) }}
+          title={currentLocation.isSimulated ? "Last saved simulated position (not live GPS)" : "Your current GPS location"}
+          label="You"
+          zIndex={10}
+        />
+      )}
       {routePaths.map(({ route, path }, index) => {
         const selected = route === selectedRoute || (route?.routeId && route.routeId === selectedRoute?.routeId);
         if (path.length < 2 || selected) return null;
@@ -56,6 +64,7 @@ export default function LeafletRouteMap({ originPoint, destinationPoint, routes 
       {hasGeometry && <Polyline path={selectedPath} options={{ strokeColor: "#7c3aed", strokeOpacity: 0.95, strokeWeight: 6, zIndex: 3 }} />}
     </GoogleMap>
     {selectedRoute && !hasGeometry && <p className="bg-amber-50 p-3 text-sm text-amber-800">The backend did not return road geometry for this route. Its card may be an estimate; the map will not draw a misleading substitute route.</p>}
-    {hasGeometry && <p className="bg-violet-50 px-3 py-2 text-sm text-violet-700">Map path matches the selected backend route.</p>}
+    {hasGeometry && <p className="bg-violet-50 px-3 py-2 text-sm text-violet-700">Map path matches the selected backend route. This does not verify personal safety.</p>}
+    {currentLocation && <p className="bg-slate-50 px-3 py-2 text-xs text-slate-600">{currentLocation.isSimulated ? "Last saved location is simulated; it is not live GPS." : "Current/last GPS position is shown as 'You'."} Accuracy: {Math.round(Number(currentLocation.accuracy) || 0)} m.</p>}
   </div>;
 }

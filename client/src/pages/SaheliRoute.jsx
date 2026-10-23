@@ -74,6 +74,20 @@ export default function SaheliRoute() {
       const journey = response.data?.data;
 
       setActiveJourney(journey || null);
+      if (journey?.lastLocation && Number.isFinite(Number(journey.lastLocation.lat)) && Number.isFinite(Number(journey.lastLocation.lng))) {
+        setCurrentLocation({
+          lat: Number(journey.lastLocation.lat),
+          lng: Number(journey.lastLocation.lng),
+          accuracy: Number(journey.lastLocation.accuracy || 0),
+          timestamp: journey.lastLocation.updatedAt || journey.updatedAt || new Date().toISOString(),
+          isSimulated: Boolean(journey.lastLocation.isSimulated),
+        });
+        setLocationStatus(journey.lastLocation.isSimulated
+          ? "Last saved position was simulated, not live GPS."
+          : "Showing last saved location. Enable tracking for a fresh GPS fix.");
+      } else {
+        setCurrentLocation(null);
+      }
 
       if (journey) {
         setJourneyStatus("active");
@@ -81,7 +95,31 @@ export default function SaheliRoute() {
         setDestination(journey.destination?.label || "");
         setOriginPoint(journey.origin);
         setDestinationPoint(journey.destination);
-        setNotice("Your active journey was restored from the backend.");
+        // Geometry is not stored in the Journey model, so request fresh route
+        // options and match the saved route reference when the page is restored.
+        try {
+          const routeResponse = await api.post("/routes/calculate", {
+            origin: journey.origin,
+            destination: journey.destination,
+          });
+          const payload = routeResponse.data?.data;
+          const restoredRoutes = Array.isArray(payload) ? payload : payload?.routes;
+          if (Array.isArray(restoredRoutes) && restoredRoutes.length) {
+            setRoutes(restoredRoutes);
+            const matched = restoredRoutes.find((item) => item.routeId === journey.routeRef)
+              || restoredRoutes.find((item) => item.type === journey.routeType)
+              || restoredRoutes[0];
+            setSelectedRoute(matched);
+          } else {
+            setRoutes([]);
+            setSelectedRoute(null);
+          }
+        } catch (routeError) {
+          console.warn("Could not restore route geometry", routeError);
+          setRoutes([]);
+          setSelectedRoute(null);
+        }
+        setNotice("Your active journey was restored. Enable live location sharing to update your GPS position.");
       } else {
         setJourneyStatus("idle");
       }
@@ -335,6 +373,7 @@ export default function SaheliRoute() {
 
       stopLocationTracking();
       setActiveJourney(null);
+      setCurrentLocation(null);
       setJourneyStatus("completed");
       if (selectedRoute?.routeId) await refreshRouteFeedback(selectedRoute.routeId);
       setNotice("Journey completed and updated in the backend.");
@@ -369,12 +408,22 @@ export default function SaheliRoute() {
       );
 
       const result = response.data?.data;
-
-      setNotice(
-        `SOS request processed. The backend reports ${
-          result?.notifiedContactsCount ?? 0
-        } trusted contact(s) selected for notification. Verify delivery in the backend.`
-      );
+      const dispatches = Array.isArray(result?.dispatchDetails) ? result.dispatchDetails : [];
+      const sent = dispatches.filter((item) => item.delivery?.sent === true && item.delivery?.provider !== "simulated_sms").length;
+      const simulated = dispatches.filter((item) => item.delivery?.provider === "simulated_sms").length;
+      const failed = dispatches.filter((item) => item.delivery?.sent !== true).length;
+      const details = dispatches.map((item) => {
+        const provider = item.delivery?.provider;
+        const state = provider === "simulated_sms" ? "SIMULATED (not a real SMS)"
+          : item.delivery?.sent === true ? `accepted by ${provider || "SMS provider"}`
+          : `FAILED${item.delivery?.error ? `: ${item.delivery.error}` : ""}`;
+        return `${item.name || item.phone}: ${state}`;
+      });
+      setNotice([
+        `SOS request processed. ${sent} SMS request(s) accepted by a real provider, ${simulated} simulated, ${failed} failed/unconfirmed.`,
+        result?.mapLink ? `Location link: ${result.mapLink}` : "",
+        ...details,
+      ].filter(Boolean).join("\n"));
     } catch (err) {
       setError(getError(err));
     } finally {
@@ -510,7 +559,7 @@ export default function SaheliRoute() {
           {notice && (
             <p
               role="status"
-              className="mt-4 rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-600"
+              className="mt-4 whitespace-pre-line rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-600"
             >
               {notice}
             </p>
@@ -538,14 +587,17 @@ export default function SaheliRoute() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold text-slate-900">
-                          {routeOption.title ||
-                            routeOption.type ||
-                            `Route ${index + 1}`}
+                          {routeOption.type === "faster"
+                            ? `Route ${index + 1} · Faster option`
+                            : routeOption.type === "balanced"
+                              ? `Route ${index + 1} · Alternative option`
+                              : `Route ${index + 1} · Route option`}
                         </p>
 
                         <p className="mt-1 text-sm text-slate-500">
-                          {routeOption.description ||
-                            (routeOption.safetyHighlights || []).join(" · ")}
+                          {routeOption.polyline || (Array.isArray(routeOption.coordinates) && routeOption.coordinates.length > 1)
+                            ? "Road geometry provided by the routing service. This is not a verified safety rating."
+                            : "Estimated route details only. Road geometry and verified safety data are unavailable."}
                         </p>
                       </div>
 
@@ -568,13 +620,16 @@ export default function SaheliRoute() {
                         {formatDuration(routeOption.durationMinutes)}
                       </span>
 
-                      {Number.isFinite(Number(routeOption.safetyScore)) && routeOption.safetyScore !== null ? (
+                      {routeOption.safetyDataVerified === true &&
+                      routeOption.safetyScore !== null &&
+                      routeOption.safetyScore !== undefined &&
+                      Number.isFinite(Number(routeOption.safetyScore)) ? (
                         <span className="font-medium text-emerald-700">
-                          Safety score: {routeOption.safetyScore}/10
+                          Verified safety score: {routeOption.safetyScore}/10
                         </span>
                       ) : (
                         <span className="font-medium text-amber-700">
-                          Safety score unavailable · insufficient verified data
+                          Safety score unavailable · no verified safety data
                         </span>
                       )}
                     </div>
@@ -625,6 +680,7 @@ export default function SaheliRoute() {
   destinationPoint={destinationPoint}
   routes={routes}
   selectedRoute={selectedRoute}
+  currentLocation={currentLocation}
 />
             {originPoint && destinationPoint && (
               <p className="mt-3 break-words px-2 text-sm text-slate-500">
