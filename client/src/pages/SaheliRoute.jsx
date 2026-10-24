@@ -39,9 +39,25 @@ const geocodePlace = async (place) => {
   };
 };
 
+<<<<<<< HEAD
 export default function SaheliRoute({ initialStart = "", initialDestination = "" }) {
   const [start, setStart] = useState(initialStart || "");
   const [destination, setDestination] = useState(initialDestination || "");
+=======
+const getFeedbackStorageKey = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem("sahelishield_user") || "null");
+    const identity = user?.id || user?._id || user?.email || "current-user";
+    return `sahelishield_pending_route_feedback_${identity}`;
+  } catch {
+    return "sahelishield_pending_route_feedback_current-user";
+  }
+};
+
+export default function SaheliRoute() {
+  const [start, setStart] = useState("");
+  const [destination, setDestination] = useState("");
+>>>>>>> origin/main
   const [routes, setRoutes] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [originPoint, setOriginPoint] = useState(null);
@@ -62,6 +78,13 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
   const [feedbackComment, setFeedbackComment] = useState("");
   const [feedbackItems, setFeedbackItems] = useState([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackContext, setFeedbackContext] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(getFeedbackStorageKey()) || "null");
+    } catch {
+      return null;
+    }
+  });
 
   const getError = (err) =>
     err.response?.data?.message ||
@@ -153,8 +176,8 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
     setLocationStatus("Location sharing is paused.");
   };
 
-  const startLocationTracking = () => {
-    if (!activeJourney?._id) {
+  const startLocationTracking = (journeyId = activeJourney?._id) => {
+    if (!journeyId) {
       setLocationStatus("Start a journey before sharing live location.");
       return;
     }
@@ -190,7 +213,7 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
         lastLocationSentRef.current = now;
 
         try {
-          await api.patch(`/journeys/${activeJourney._id}/location`, location);
+          await api.patch(`/journeys/${journeyId}/location`, location);
           setLocationStatus(`Live location shared at ${new Date().toLocaleTimeString()}.`);
         } catch (err) {
           setLocationStatus("Location was detected, but the server could not save it.");
@@ -237,25 +260,37 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
 
   const submitRouteFeedback = async (event) => {
     event.preventDefault();
-    if (!selectedRoute?.routeId) { setError("Select a route before submitting feedback."); return; }
-    setFeedbackLoading(true); setError(""); setNotice("");
+    if (!feedbackContext?.routeRef) {
+      setError("Complete a journey before submitting route feedback.");
+      return;
+    }
+
+    setFeedbackLoading(true);
+    setError("");
+    setNotice("");
     try {
       await api.post("/routes/feedback", {
-        journeyId: activeJourney?._id || undefined,
-        routeRef: selectedRoute.routeId,
-        originLabel: originPoint?.label || start,
-        destinationLabel: destinationPoint?.label || destination,
+        journeyId: feedbackContext.journeyId || undefined,
+        routeRef: feedbackContext.routeRef,
+        originLabel: feedbackContext.originLabel || start,
+        destinationLabel: feedbackContext.destinationLabel || destination,
         rating: Number(feedbackRating),
         comment: feedbackComment.trim(),
         safetyTags: [],
         timeOfDay: new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening",
-        travelDurationMinutes: Number(selectedRoute.durationMinutes) || 0,
+        travelDurationMinutes: Number(feedbackContext.durationMinutes) || 0,
       });
+
       setFeedbackComment("");
-      setNotice("Thank you. Your route feedback was submitted.");
-      await refreshRouteFeedback(selectedRoute.routeId);
-    } catch (err) { setError(getError(err)); }
-    finally { setFeedbackLoading(false); }
+      setFeedbackContext(null);
+      localStorage.removeItem(getFeedbackStorageKey());
+      setNotice("Thank you. Your feedback was submitted. It will be available again after you complete another journey.");
+      await refreshRouteFeedback(feedbackContext.routeRef);
+    } catch (err) {
+      setError(getError(err));
+    } finally {
+      setFeedbackLoading(false);
+    }
   };
 
   const handleFindRoutes = async (event) => {
@@ -323,21 +358,46 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
 
   const startJourney = async () => {
     if (!selectedRoute || !originPoint || !destinationPoint) {
-      setError("Find a route before starting your journey.");
+      setError("Find and select a route before starting your journey.");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setError("Location is required to start a journey, but this browser does not support geolocation.");
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      setError("Location permission requires HTTPS or localhost. Open the secure version of this site and try again.");
       return;
     }
 
     setJourneyLoading(true);
     setError("");
-    setNotice("");
+    setNotice("Requesting your current location. A journey cannot start without location permission.");
 
     try {
-      const durationMinutes =
-        Number(selectedRoute.durationMinutes) || 30;
+      // Mandatory fresh GPS fix BEFORE creating the journey.
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 0,
+        });
+      });
 
-      const eta = new Date(
-        Date.now() + (durationMinutes + 10) * 60 * 1000
-      ).toISOString();
+      const initialLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        timestamp: new Date(position.timestamp).toISOString(),
+        isSimulated: false,
+      };
+      setCurrentLocation(initialLocation);
+      setLocationStatus(`GPS permission granted (accuracy ±${Math.round(initialLocation.accuracy)} m). Starting journey...`);
+
+      const durationMinutes = Number(selectedRoute.durationMinutes) || 30;
+      const eta = new Date(Date.now() + (durationMinutes + 10) * 60 * 1000).toISOString();
 
       const response = await api.post("/journeys", {
         origin: originPoint,
@@ -348,16 +408,38 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
       });
 
       const journey = response.data?.data;
-
       if (!journey?._id) {
         throw new Error("The backend did not return a journey ID.");
       }
 
       setActiveJourney(journey);
       setJourneyStatus("active");
-      setNotice("Journey started and saved successfully.");
+
+      let locationSaved = false;
+      try {
+        await api.patch(`/journeys/${journey._id}/location`, initialLocation);
+        locationSaved = true;
+        lastLocationSentRef.current = Date.now();
+      } catch (locationError) {
+        setError(`Journey was created, but the initial GPS position could not be saved: ${getError(locationError)}`);
+      }
+
+      // Start continuous tracking immediately, using the newly created journey ID.
+      startLocationTracking(journey._id);
+      setNotice(locationSaved
+        ? "Journey started. Your current GPS position was saved and live location tracking is enabled."
+        : "Journey started with GPS permission enabled. The first location save failed; live tracking will retry on the next GPS update.");
     } catch (err) {
-      setError(getError(err));
+      const geoMessages = {
+        1: "Location permission is required. Allow location access in your browser settings, then press Start journey again.",
+        2: "Your current location could not be determined. Enable device GPS/location and try again.",
+        3: "Getting your current location timed out. Move to an area with better GPS/network signal and try again.",
+      };
+      if (typeof err?.code === "number" && geoMessages[err.code]) {
+        setError(geoMessages[err.code]);
+      } else {
+        setError(getError(err));
+      }
     } finally {
       setJourneyLoading(false);
     }
@@ -374,11 +456,23 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
       await api.post(`/journeys/${activeJourney._id}/complete`);
 
       stopLocationTracking();
+      const completedFeedbackContext = {
+        journeyId: activeJourney._id,
+        routeRef: selectedRoute?.routeId || activeJourney.routeRef,
+        originLabel: originPoint?.label || activeJourney.origin?.label || start,
+        destinationLabel: destinationPoint?.label || activeJourney.destination?.label || destination,
+        durationMinutes: Number(selectedRoute?.durationMinutes) || 0,
+        completedAt: new Date().toISOString(),
+      };
       setActiveJourney(null);
       setCurrentLocation(null);
       setJourneyStatus("completed");
-      if (selectedRoute?.routeId) await refreshRouteFeedback(selectedRoute.routeId);
-      setNotice("Journey completed and updated in the backend.");
+      if (completedFeedbackContext.routeRef) {
+        setFeedbackContext(completedFeedbackContext);
+        localStorage.setItem(getFeedbackStorageKey(), JSON.stringify(completedFeedbackContext));
+        await refreshRouteFeedback(completedFeedbackContext.routeRef);
+      }
+      setNotice("Journey completed and saved. You can now submit feedback for this journey.");
     } catch (err) {
       setError(getError(err));
     } finally {
@@ -410,20 +504,34 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
       );
 
       const result = response.data?.data;
-      const dispatches = Array.isArray(result?.dispatchDetails) ? result.dispatchDetails : [];
-      const sent = dispatches.filter((item) => item.delivery?.sent === true && item.delivery?.provider !== "simulated_sms").length;
-      const simulated = dispatches.filter((item) => item.delivery?.provider === "simulated_sms").length;
-      const failed = dispatches.filter((item) => item.delivery?.sent !== true).length;
+      const dispatches = Array.isArray(result?.dispatchDetails)
+        ? result.dispatchDetails
+        : [];
+      const isSimulated = (item) =>
+        item?.delivery?.provider === "simulated_sms" ||
+        item?.delivery?.simulated === true;
+      const realAccepted = (item) =>
+        item?.delivery?.sent === true && !isSimulated(item);
+      const sent = dispatches.filter(realAccepted).length;
+      const simulated = dispatches.filter(isSimulated).length;
+      const failed = dispatches.filter(
+        (item) => !isSimulated(item) && item?.delivery?.sent !== true
+      ).length;
       const details = dispatches.map((item) => {
-        const provider = item.delivery?.provider;
-        const state = provider === "simulated_sms" ? "SIMULATED (not a real SMS)"
-          : item.delivery?.sent === true ? `accepted by ${provider || "SMS provider"}`
-          : `FAILED${item.delivery?.error ? `: ${item.delivery.error}` : ""}`;
-        return `${item.name || item.phone}: ${state}`;
+        const provider = item?.delivery?.provider;
+        const delivery = item?.delivery || {};
+        const recipient = item?.name || item?.phone || "Trusted contact";
+        const state = isSimulated(item)
+          ? "SIMULATED — no real SMS was sent"
+          : delivery.sent === true
+            ? `accepted by ${provider || "SMS provider"}; delivery not guaranteed`
+            : `FAILED / UNCONFIRMED${delivery.error ? `: ${delivery.error}` : ""}`;
+        return `${recipient}: ${state}`;
       });
       setNotice([
-        `SOS request processed. ${sent} SMS request(s) accepted by a real provider, ${simulated} simulated, ${failed} failed/unconfirmed.`,
+        `SOS request processed. ${sent} SMS request(s) accepted by a real provider, ${simulated} simulated, ${failed} failed/unconfirmed. Provider acceptance does not confirm delivery.`,
         result?.mapLink ? `Location link: ${result.mapLink}` : "",
+        dispatches.length === 0 ? "No per-contact delivery details were returned by the backend." : "",
         ...details,
       ].filter(Boolean).join("\n"));
     } catch (err) {
@@ -781,18 +889,41 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
             </div>
           </section>
 
-          {selectedRoute && (
+          {feedbackContext && journeyStatus !== "active" && (
             <section className="rounded-2xl border border-slate-200 bg-white p-5">
-              <div className="mb-4 flex items-center gap-2"><Star className="text-amber-500" size={20} /><h3 className="font-semibold text-slate-900">Route feedback</h3></div>
+              <div className="mb-2 flex items-center gap-2">
+                <Star className="text-amber-500" size={20} />
+                <h3 className="font-semibold text-slate-900">Journey feedback</h3>
+              </div>
+              <p className="mb-4 text-sm text-slate-500">
+                Your journey is complete: {feedbackContext.originLabel} → {feedbackContext.destinationLabel}. Submit feedback once for this completed journey.
+              </p>
               <form onSubmit={submitRouteFeedback} className="space-y-3">
                 <label className="block text-sm font-medium text-slate-700">Your rating</label>
-                <select value={feedbackRating} onChange={(e) => setFeedbackRating(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 px-3 py-2"><option value={5}>5 - Excellent</option><option value={4}>4 - Good</option><option value={3}>3 - Average</option><option value={2}>2 - Poor</option><option value={1}>1 - Very poor</option></select>
-                <textarea value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} maxLength={1000} rows={3} placeholder="Share helpful details about this route (optional)" className="w-full rounded-xl border border-slate-200 p-3 text-sm" />
-                <button disabled={feedbackLoading} className="w-full rounded-xl bg-violet-700 px-4 py-3 font-semibold text-white disabled:opacity-50">{feedbackLoading ? "Submitting..." : "Submit route feedback"}</button>
+                <select value={feedbackRating} onChange={(e) => setFeedbackRating(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 px-3 py-2">
+                  <option value={5}>5 - Excellent</option><option value={4}>4 - Good</option><option value={3}>3 - Average</option><option value={2}>2 - Poor</option><option value={1}>1 - Very poor</option>
+                </select>
+                <textarea value={feedbackComment} onChange={(e) => setFeedbackComment(e.target.value)} maxLength={1000} rows={3} placeholder="Share helpful details about this completed journey (optional)" className="w-full rounded-xl border border-slate-200 p-3 text-sm" />
+                <button type="submit" disabled={feedbackLoading} className="w-full rounded-xl bg-violet-700 px-4 py-3 font-semibold text-white disabled:opacity-50">{feedbackLoading ? "Submitting..." : "Submit journey feedback"}</button>
               </form>
-              <p className="mt-3 text-xs leading-5 text-slate-500">Community feedback is informational and is not a guarantee of route safety.</p>
-              {feedbackItems.length > 0 && <div className="mt-4 space-y-3 border-t border-slate-100 pt-4"><h4 className="text-sm font-semibold">Recent feedback</h4>{feedbackItems.map((item) => <div key={item._id} className="rounded-xl bg-slate-50 p-3"><p className="text-sm font-medium">{item.authorName || "Traveller"} · {item.rating}/5</p>{item.comment && <p className="mt-1 text-sm text-slate-600">{item.comment}</p>}<p className="mt-1 text-xs text-slate-400">{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ""}</p></div>)}</div>}
+              <p className="mt-3 text-xs leading-5 text-slate-500">Community feedback is informational and does not guarantee route safety.</p>
+              {feedbackItems.length > 0 && (
+                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                  <h4 className="text-sm font-semibold text-slate-900">Recent community feedback for this route</h4>
+                  {feedbackItems.map((item) => (
+                    <div key={item._id} className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-sm font-medium text-slate-800">{item.authorName || "Traveller"} · {item.rating}/5</p>
+                      {item.comment && <p className="mt-1 text-sm text-slate-600">{item.comment}</p>}
+                      <p className="mt-1 text-xs text-slate-400">{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ""}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
+          )}
+
+          {feedbackContext && journeyStatus === "active" && (
+            <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500">Feedback will be available after you complete your current journey.</p>
           )}
         </div>
       </div>

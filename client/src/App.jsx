@@ -214,7 +214,7 @@ export default function App() {
         return <ActivityHistory />;
 
       case "settings":
-        return <Settings />;
+        return <Settings onLogout={handleLogout} />;
 
       case "dashboard":
       default:
