@@ -907,7 +907,7 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
                 type="button"
                 onClick={handleSOS}
                 disabled={journeyLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 hover:bg-red-700 px-4 py-3.5 text-sm font-bold text-white shadow-md shadow-red-600/30 transition active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 px-4 py-3.5 text-sm font-bold text-white shadow-md shadow-red-600/30 transition active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none disabled:opacity-60 cursor-pointer"
               >
                 <Phone size={18} />
                 Send SOS email
