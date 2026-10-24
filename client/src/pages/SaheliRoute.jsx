@@ -321,9 +321,20 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
         destination.trim()
       );
 
+      // Detect user's local time of day so backend applies time-sensitive safety scoring
+      const getTimeOfDay = () => {
+        const h = new Date().getHours();
+        if (h >= 23 || h < 5) return "late_night";
+        if (h >= 19) return "night";
+        if (h >= 16) return "evening";
+        if (h >= 12) return "afternoon";
+        return "morning";
+      };
+
       const response = await api.post("/routes/calculate", {
         origin,
         destination: destinationLocation,
+        timeOfDay: getTimeOfDay(),
       });
 
       const result = response.data?.data;
@@ -675,18 +686,24 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
+                        {/* Use backend title; fall back to type label */}
                         <p className="font-semibold text-slate-900">
-                          {routeOption.type === "faster"
-                            ? `Route ${index + 1} · Faster option`
-                            : routeOption.type === "balanced"
-                              ? `Route ${index + 1} · Alternative option`
-                              : `Route ${index + 1} · Route option`}
+                          {routeOption.title ||
+                            (routeOption.type === "safer"
+                              ? `Route ${index + 1} · Safer Route`
+                              : routeOption.type === "faster"
+                                ? `Route ${index + 1} · Faster Route`
+                                : routeOption.type === "balanced"
+                                  ? `Route ${index + 1} · Balanced Route`
+                                  : `Route ${index + 1} · Route`)}
                         </p>
 
+                        {/* Use backend description if available */}
                         <p className="mt-1 text-sm text-slate-500">
-                          {routeOption.polyline || (Array.isArray(routeOption.coordinates) && routeOption.coordinates.length > 1)
-                            ? "Road geometry provided by the routing service. This is not a verified safety rating."
-                            : "Estimated route details only. Road geometry and verified safety data are unavailable."}
+                          {routeOption.description ||
+                            (routeOption.polyline || (Array.isArray(routeOption.coordinates) && routeOption.coordinates.length > 1)
+                              ? "Road geometry provided by routing service."
+                              : "Estimated route — no live road geometry available.")}
                         </p>
                       </div>
 
@@ -698,6 +715,7 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
                       )}
                     </div>
 
+                    {/* Stats row: distance · duration · safety score */}
                     <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-600">
                       <span className="flex items-center gap-1">
                         <Route size={15} />
@@ -709,19 +727,37 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
                         {formatDuration(routeOption.durationMinutes)}
                       </span>
 
-                      {routeOption.safetyDataVerified === true &&
-                      routeOption.safetyScore !== null &&
-                      routeOption.safetyScore !== undefined &&
-                      Number.isFinite(Number(routeOption.safetyScore)) ? (
-                        <span className="font-medium text-emerald-700">
-                          Verified safety score: {routeOption.safetyScore}/10
+                      {/* Safety score from backend — no safetyDataVerified guard needed */}
+                      {Number.isFinite(Number(routeOption.safetyScore)) ? (
+                        <span
+                          className={`font-semibold ${
+                            Number(routeOption.safetyScore) >= 8.5
+                              ? "text-emerald-700"
+                              : Number(routeOption.safetyScore) >= 7
+                                ? "text-amber-600"
+                                : "text-red-600"
+                          }`}
+                        >
+                          🛡 Safety {routeOption.safetyScore}/10
                         </span>
                       ) : (
-                        <span className="font-medium text-amber-700">
-                          Safety score unavailable · no verified safety data
+                        <span className="text-slate-400">
+                          Safety score pending
                         </span>
                       )}
                     </div>
+
+                    {/* Safety highlights from backend */}
+                    {Array.isArray(routeOption.safetyHighlights) && routeOption.safetyHighlights.length > 0 && (
+                      <ul className="mt-2 space-y-0.5">
+                        {routeOption.safetyHighlights.map((highlight, hIdx) => (
+                          <li key={hIdx} className="flex items-start gap-1.5 text-xs text-slate-500">
+                            <span className="mt-0.5 shrink-0 text-emerald-500">✓</span>
+                            {highlight}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </button>
                 ))}
               </div>
