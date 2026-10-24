@@ -39,6 +39,9 @@ const geocodePlace = async (place) => {
   };
 };
 
+export default function SaheliRoute({ initialStart = "", initialDestination = "" }) {
+  const [start, setStart] = useState(initialStart || "");
+  const [destination, setDestination] = useState(initialDestination || "");
 const getFeedbackStorageKey = () => {
   try {
     const user = JSON.parse(localStorage.getItem("sahelishield_user") || "null");
@@ -288,7 +291,9 @@ export default function SaheliRoute() {
   };
 
   const handleFindRoutes = async (event) => {
-    event.preventDefault();
+    if (event?.preventDefault) {
+      event.preventDefault();
+    }
     setError("");
     setNotice("");
 
