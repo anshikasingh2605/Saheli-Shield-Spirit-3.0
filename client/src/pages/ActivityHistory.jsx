@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   History,
   MapPin,
@@ -7,9 +7,11 @@ import {
   Search,
   Clock,
   Filter,
-  Info,
   RefreshCw,
   AlertCircle,
+  CheckCircle2,
+  Navigation,
+  Siren,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -26,7 +28,25 @@ function formatDate(value) {
   });
 }
 
-function formatRisk(value) {
+function getErrorMessage(error) {
+  return (
+    error.response?.data?.message ||
+    error.message ||
+    "Unable to load records."
+  );
+}
+
+function extractArray(payload, keys = []) {
+  if (Array.isArray(payload)) return payload;
+
+  for (const key of keys) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
+
+  return null;
+}
+
+function getRiskLabel(value) {
   const labels = {
     safe: "Safe",
     low_risk: "Low risk",
@@ -37,105 +57,178 @@ function formatRisk(value) {
   return labels[value] || value || "Analyzed";
 }
 
-function getRiskStyle(value) {
-  switch (value) {
-    case "high_risk":
-      return "bg-red-50 text-red-700";
-    case "potentially_suspicious":
-      return "bg-amber-50 text-amber-700";
-    case "low_risk":
-      return "bg-yellow-50 text-yellow-700";
-    case "safe":
+function getStatusStyle(status, type) {
+  if (type === "scam") {
+    switch (status) {
+      case "High risk":
+        return "bg-red-50 text-red-700";
+      case "Suspicious":
+        return "bg-amber-50 text-amber-700";
+      case "Low risk":
+        return "bg-yellow-50 text-yellow-700";
+      case "Safe":
+        return "bg-emerald-50 text-emerald-700";
+      default:
+        return "bg-slate-100 text-slate-600";
+    }
+  }
+
+  switch (String(status).toLowerCase()) {
+    case "active":
+      return "bg-blue-50 text-blue-700";
+    case "completed":
       return "bg-emerald-50 text-emerald-700";
-    default:
+    case "cancelled":
       return "bg-slate-100 text-slate-600";
+    case "overdue":
+      return "bg-red-50 text-red-700";
+    default:
+      return "bg-amber-50 text-amber-700";
   }
 }
 
-function extractHistory(responseData) {
-  // Support common API response shapes without assuming
-  // that the backend always returns the same wrapper.
-  if (Array.isArray(responseData)) return responseData;
+function formatJourneyStatus(status) {
+  const labels = {
+    active: "Active",
+    completed: "Completed",
+    cancelled: "Cancelled",
+    overdue: "Overdue",
+  };
 
-  if (Array.isArray(responseData?.scans)) {
-    return responseData.scans;
-  }
-
-  if (Array.isArray(responseData?.history)) {
-    return responseData.history;
-  }
-
-  if (Array.isArray(responseData?.records)) {
-    return responseData.records;
-  }
-
-  return null;
+  return labels[String(status).toLowerCase()] || status || "Recorded";
 }
 
 export default function ActivityHistory() {
   const [filter, setFilter] = useState("all");
   const [scans, setScans] = useState([]);
+  const [journeys, setJourneys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [partialErrors, setPartialErrors] = useState([]);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     setLoading(true);
     setError("");
+    setPartialErrors([]);
 
-    try {
-      const response = await api.get("/scams/history");
-      const history = extractHistory(response.data?.data);
+    const [scamResult, journeyResult] = await Promise.allSettled([
+      api.get("/scams/history"),
+      api.get("/journeys/history"),
+    ]);
 
-      if (history === null) {
-        throw new Error(
-          "The history response format was unexpected. Check the API response."
-        );
+    const errors = [];
+
+    if (scamResult.status === "fulfilled") {
+      const response = scamResult.value.data;
+      const history = extractArray(response?.data, [
+        "scans",
+        "history",
+        "records",
+      ]);
+
+      if (history !== null) {
+        setScans(history);
+      } else {
+        setScans([]);
+        errors.push("Scam history returned an unexpected response format.");
       }
-
-      setScans(history);
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Unable to load scam history. Please try again."
-      );
-    } finally {
-      setLoading(false);
+    } else {
+      setScans([]);
+      errors.push(`Scam history: ${getErrorMessage(scamResult.reason)}`);
     }
-  };
+
+    if (journeyResult.status === "fulfilled") {
+      const response = journeyResult.value.data;
+      const history = extractArray(response?.data, [
+        "journeys",
+        "history",
+        "records",
+      ]);
+
+      if (history !== null) {
+        setJourneys(history);
+      } else {
+        setJourneys([]);
+        errors.push("Journey history returned an unexpected response format.");
+      }
+    } else {
+      setJourneys([]);
+      errors.push(`Journey history: ${getErrorMessage(journeyResult.reason)}`);
+    }
+
+    setPartialErrors(errors);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [fetchHistory]);
 
   const activities = useMemo(() => {
-    return scans
-      .map((scan, index) => {
-        const riskLevel = scan.riskLevel || scan.result?.riskLevel;
+    const scamActivities = scans.map((scan, index) => {
+      const riskLevel = scan.riskLevel || scan.result?.riskLevel;
+      const timestamp =
+        scan.createdAt ||
+        scan.updatedAt ||
+        scan.timestamp ||
+        scan.scannedAt;
 
-        return {
-          id: scan._id || scan.id || scan.scanId || `scan-${index}`,
-          type: "scam",
-          title: "Scam message analysis",
-          detail:
-            scan.message ||
-            scan.url ||
-            scan.content ||
-            scan.explanation ||
-            "Scam analysis completed.",
-          status: formatRisk(riskLevel),
-          riskLevel,
-          time: formatDate(
-            scan.createdAt ||
-              scan.updatedAt ||
-              scan.timestamp ||
-              scan.scannedAt
-          ),
-          explanation: scan.explanation || scan.result?.explanation,
-        };
-      })
-      .filter((item) => filter === "all" || item.type === filter);
-  }, [scans, filter]);
+      return {
+        id: `scam-${scan._id || scan.id || scan.scanId || index}`,
+        type: "scam",
+        title: "Scam message analysis",
+        detail:
+          scan.message ||
+          scan.url ||
+          scan.content ||
+          scan.explanation ||
+          "Scam analysis completed.",
+        status: getRiskLabel(riskLevel),
+        riskLevel,
+        time: formatDate(timestamp),
+        sortTime: timestamp ? new Date(timestamp).getTime() : 0,
+        explanation: scan.explanation || scan.result?.explanation,
+      };
+    });
+
+    const journeyActivities = journeys.map((journey, index) => {
+      const status = String(journey.status || "").toLowerCase();
+      const timestamp =
+        journey.createdAt ||
+        journey.startedAt ||
+        journey.updatedAt;
+
+      return {
+        id: `journey-${journey._id || journey.id || index}`,
+        type: "journey",
+        title:
+          status === "completed"
+            ? "Journey completed"
+            : status === "active"
+              ? "Journey started"
+              : status === "cancelled"
+                ? "Journey cancelled"
+                : status === "overdue"
+                  ? "Journey overdue"
+                  : "Journey activity",
+        detail: `${journey.origin?.label || "Starting point"} → ${
+          journey.destination?.label || "Destination"
+        }`,
+        status: formatJourneyStatus(status),
+        time: formatDate(timestamp),
+        sortTime: timestamp ? new Date(timestamp).getTime() : 0,
+        explanation: journey.completedAt
+          ? `Completed on ${formatDate(journey.completedAt)}`
+          : journey.sosTriggered
+            ? `SOS was triggered${journey.sosTriggeredAt ? ` on ${formatDate(journey.sosTriggeredAt)}` : ""}. This does not confirm SMS delivery.`
+            : null,
+      };
+    });
+
+    return [...scamActivities, ...journeyActivities]
+      .filter((item) => filter === "all" || item.type === filter)
+      .sort((a, b) => b.sortTime - a.sortTime);
+  }, [scans, journeys, filter]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -144,7 +237,6 @@ export default function ActivityHistory() {
           <div className="rounded-xl bg-violet-100 p-3 text-violet-700">
             <History size={27} />
           </div>
-
           <div>
             <p className="text-sm font-medium text-violet-700">
               YOUR RECENT ACTIVITY
@@ -156,7 +248,7 @@ export default function ActivityHistory() {
         </div>
 
         <p className="mt-4 text-slate-500">
-          Review your saved scam checks and journey activity.
+          Review your journey records and saved scam checks in one place.
         </p>
       </section>
 
@@ -169,15 +261,21 @@ export default function ActivityHistory() {
             <p className="mt-1 text-sm text-slate-500">
               {loading
                 ? "Loading records..."
-                : `${activities.length} scam check ${
-                    activities.length === 1 ? "record" : "records"
+                : `${activities.length} ${
+                    activities.length === 1
+                      ? "activity record"
+                      : "activity records"
                   }`}
             </p>
+            {!loading && (
+              <p className="mt-1 text-xs text-slate-400">
+                {journeys.length} journeys · {scans.length} scam checks
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Filter size={17} className="text-slate-500" />
-
             <select
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
@@ -204,48 +302,54 @@ export default function ActivityHistory() {
           </div>
         </div>
 
-        {error && (
-          <div className="mt-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
-            <AlertCircle
-              size={20}
-              className="mt-0.5 shrink-0 text-red-600"
-            />
-            <div className="flex-1">
-              <p className="font-medium text-red-800">
-                Could not load activity
-              </p>
-              <p className="mt-1 break-words text-sm text-red-700">
-                {error}
-              </p>
-              <button
-                type="button"
-                onClick={fetchHistory}
-                className="mt-2 text-sm font-semibold text-red-800 underline"
-              >
-                Try again
-              </button>
+        {partialErrors.length > 0 && (
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" />
+              <div>
+                <p className="font-medium text-amber-900">
+                  Some history could not be loaded
+                </p>
+                {partialErrors.map((message) => (
+                  <p
+                    key={message}
+                    className="mt-1 break-words text-sm text-amber-800"
+                  >
+                    {message}
+                  </p>
+                ))}
+                <p className="mt-2 text-sm text-amber-800">
+                  Check that the journey-history endpoint exists on your deployed backend.
+                </p>
+              </div>
             </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
           </div>
         )}
 
         <div className="mt-6 space-y-3">
           {loading && (
             <div className="py-10 text-center text-slate-500">
-              <RefreshCw
-                className="mx-auto animate-spin"
-                size={26}
-              />
-              <p className="mt-3 text-sm">
-                Fetching your saved scam checks...
-              </p>
+              <RefreshCw className="mx-auto animate-spin" size={26} />
+              <p className="mt-3 text-sm">Fetching your activity history...</p>
             </div>
           )}
 
           {!loading &&
-            !error &&
             activities.map((item) => {
               const isJourney = item.type === "journey";
-              const Icon = isJourney ? MapPin : ShieldCheck;
+              const Icon = isJourney
+                ? item.status === "Overdue"
+                  ? Siren
+                  : item.status === "Completed"
+                    ? CheckCircle2
+                    : Navigation
+                : ShieldCheck;
 
               return (
                 <article
@@ -261,13 +365,16 @@ export default function ActivityHistory() {
                       <h4 className="font-semibold text-slate-900">
                         {item.title}
                       </h4>
-
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                          getRiskStyle(item.riskLevel)
-                        }`}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusStyle(
+                          item.status,
+                          item.type
+                        )}`}
                       >
                         {item.status}
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
+                        {isJourney ? "Journey" : "Scam check"}
                       </span>
                     </div>
 
@@ -290,36 +397,23 @@ export default function ActivityHistory() {
               );
             })}
 
-          {!loading && !error && activities.length === 0 && (
+          {!loading && activities.length === 0 && (
             <div className="py-10 text-center">
-              <Search
-                className="mx-auto text-slate-400"
-                size={28}
-              />
+              <Search className="mx-auto text-slate-400" size={28} />
               <p className="mt-3 font-medium text-slate-700">
                 No records in this category
               </p>
               <p className="mt-1 text-sm text-slate-500">
                 {filter === "journey"
-                  ? "Journey history is not connected yet."
-                  : "Your saved scam checks will appear here."}
+                  ? "Your saved journeys will appear here once the history API is available."
+                  : filter === "scam"
+                    ? "Your saved scam checks will appear here."
+                    : "No journey or scam-check records were returned."}
               </p>
             </div>
           )}
         </div>
       </section>
-
-      <div className="flex items-start gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4">
-        <Info
-          className="mt-0.5 shrink-0 text-violet-700"
-          size={19}
-        />
-        <p className="text-sm leading-6 text-violet-900">
-          Scam-check records are fetched from your backend. Journey
-          history will be integrated separately when its history
-          endpoint is available.
-        </p>
-      </div>
     </div>
   );
 }
