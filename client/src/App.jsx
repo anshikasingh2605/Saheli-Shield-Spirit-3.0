@@ -5,6 +5,9 @@ import {
   Bell,
   ShieldCheck,
   LogOut,
+  Navigation,
+  ScanSearch,
+  Users,
 } from "lucide-react";
 
 import api from "./services/api";
@@ -74,7 +77,7 @@ export default function App() {
 
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, [page]);
+  }, []);
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("sahelishield_user");
@@ -294,45 +297,103 @@ export default function App() {
         setPage={navigateTo}
         open={sidebarOpen}
         setOpen={setSidebarOpen}
+        user={user}
+        onLogout={handleLogout}
       />
 
-      <div className="min-h-screen lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur sm:px-8">
-          <div className="flex items-center gap-3">
+      <div className="min-h-screen">
+        <header className="sticky top-0 z-30 flex h-16 sm:h-[72px] items-center justify-between border-b border-slate-200/90 bg-white/95 px-3 sm:px-6 backdrop-blur-md">
+          {/* Left section: Hamburger button + Brand title */}
+          <div className="flex items-center gap-2 sm:gap-3.5">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="rounded-lg p-2 hover:bg-slate-100 lg:hidden"
-              aria-label="Open navigation"
+              className="rounded-xl border border-slate-200/90 p-1.5 sm:p-2 text-slate-700 shadow-xs transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none"
+              aria-label="Open navigation menu"
+              title="Open menu"
             >
-              <Menu size={22} />
+              <Menu size={19} />
             </button>
 
-            <div>
-              <h1 className="font-semibold text-slate-900">
-                {titles[page] || "Dashboard"}
-              </h1>
-
-              <p className="hidden text-xs text-slate-500 sm:block">
-                SaheliShield Safety Platform
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
-              className="rounded-full border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
-              aria-label="Notifications"
+              onClick={() => navigateTo("dashboard")}
+              className="flex items-center gap-2 sm:gap-2.5 text-left transition hover:opacity-90"
             >
-              <Bell size={19} />
+              <img
+                src="/logo.png"
+                alt="SaheliShield"
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl object-contain shadow-sm ring-1 ring-purple-100 shrink-0"
+              />
+              <div className="hidden lg:block">
+                <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900">
+                  SaheliShield
+                </span>
+                <p className="text-[10px] text-purple-700 font-semibold tracking-wide uppercase">
+                  Safety Platform
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {/* Center Navigation Tabs: Responsive Segmented Capsule Control */}
+          <nav className="inline-flex items-center rounded-xl sm:rounded-2xl border border-slate-200/80 bg-slate-100/70 p-0.5 sm:p-1 backdrop-blur-xs">
+            <button
+              type="button"
+              onClick={() => navigateTo("route")}
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl px-2.5 sm:px-3.5 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold transition-all duration-200 ${
+                page === "route"
+                  ? "bg-white text-purple-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+              }`}
+            >
+              <Navigation size={14} className={page === "route" ? "text-purple-700" : "text-purple-600"} />
+              <span className="hidden sm:inline">SaheliRoute</span>
+              <span className="sm:hidden">Route</span>
             </button>
 
-            <span className="hidden max-w-40 truncate text-sm text-slate-600 md:block">
-              {user.name || user.fullName || user.email || "User"}
-            </span>
+            <button
+              type="button"
+              onClick={() => navigateTo("scam")}
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl px-2.5 sm:px-3.5 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold transition-all duration-200 ${
+                page === "scam"
+                  ? "bg-white text-emerald-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+              }`}
+            >
+              <ScanSearch size={14} className={page === "scam" ? "text-emerald-700" : "text-emerald-600"} />
+              <span className="hidden sm:inline">ScamSaathi</span>
+              <span className="sm:hidden">Scam</span>
+            </button>
+          </nav>
 
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-700">
+          {/* Right Action Items: Contacts Icon + Notifications + User Avatar + Sign out */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            {/* Quick Contacts Icon Button */}
+            <button
+              type="button"
+              onClick={() => navigateTo("contacts")}
+              className={`flex items-center gap-1.5 rounded-xl border p-1.5 sm:px-3 sm:py-1.5 text-xs font-semibold transition shadow-xs ${
+                page === "contacts"
+                  ? "border-purple-300 bg-purple-50 text-purple-800 ring-2 ring-purple-100"
+                  : "border-slate-200/90 bg-white text-slate-700 hover:border-purple-200 hover:bg-purple-50/50 hover:text-purple-800"
+              }`}
+              title="Trusted Contacts"
+              aria-label="Trusted Contacts"
+            >
+              <Users size={16} className="text-purple-600" />
+              <span className="hidden md:inline">Contacts</span>
+            </button>
+
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200/80 p-1.5 sm:p-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+              aria-label="Notifications"
+            >
+              <Bell size={16} />
+            </button>
+
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-xs sm:text-sm font-bold text-purple-800 ring-1 ring-purple-200/60">
               {(user.name || user.fullName || user.email || "U")
                 .charAt(0)
                 .toUpperCase()}
@@ -341,15 +402,16 @@ export default function App() {
             <button
               type="button"
               onClick={handleLogout}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              className="hidden md:flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
+              title="Sign out"
             >
-              <LogOut size={17} />
-              <span className="hidden sm:inline">Sign out</span>
+              <LogOut size={14} />
+              <span>Sign out</span>
             </button>
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1440px] p-5 sm:p-8">
+        <main className="mx-auto max-w-[1440px] p-3.5 sm:p-6 lg:p-8">
           {renderPage()}
         </main>
 
