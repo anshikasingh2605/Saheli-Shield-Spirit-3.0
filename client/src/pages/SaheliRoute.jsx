@@ -40,10 +40,16 @@ const geocodePlace = async (place) => {
 };
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 export default function SaheliRoute({ initialStart = "", initialDestination = "" }) {
   const [start, setStart] = useState(initialStart || "");
   const [destination, setDestination] = useState(initialDestination || "");
 =======
+=======
+export default function SaheliRoute({ initialStart = "", initialDestination = "" }) {
+  const [start, setStart] = useState(initialStart || "");
+  const [destination, setDestination] = useState(initialDestination || "");
+>>>>>>> 9fa32f9df54033d95e5523fc863a3352586f4c39
 const getFeedbackStorageKey = () => {
   try {
     const user = JSON.parse(localStorage.getItem("sahelishield_user") || "null");
@@ -57,7 +63,10 @@ const getFeedbackStorageKey = () => {
 export default function SaheliRoute() {
   const [start, setStart] = useState("");
   const [destination, setDestination] = useState("");
+<<<<<<< HEAD
 >>>>>>> origin/main
+=======
+>>>>>>> 9fa32f9df54033d95e5523fc863a3352586f4c39
   const [routes, setRoutes] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [originPoint, setOriginPoint] = useState(null);
