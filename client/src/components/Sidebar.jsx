@@ -44,7 +44,7 @@ export default function Sidebar({ page, setPage, open, setOpen, user, onLogout }
 
       {/* Smooth Slide-out Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-slate-200 bg-white p-5 shadow-2xl transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-[#E8D7DC] dark:border-[#253146] bg-[#FFF9F5] dark:bg-[#161D2B] p-5 shadow-2xl transition-transform duration-300 ease-in-out font-sans-ui ${open ? "translate-x-0" : "-translate-x-full"
           }`}
         aria-label="Navigation drawer"
       >
@@ -55,38 +55,38 @@ export default function Sidebar({ page, setPage, open, setOpen, user, onLogout }
               setPage("dashboard");
               setOpen(false);
             }}
-            className="flex items-center gap-3 text-left transition hover:opacity-90"
+            className="flex items-center gap-2.5 text-left transition hover:opacity-90 group cursor-pointer"
           >
             <img
               src="/logo.png"
               alt="SaheliShield"
-              className="h-10 w-10 rounded-xl object-contain shadow-sm ring-1 ring-purple-100"
+              className="h-10 w-10 rounded-xl object-contain shadow-xs ring-1 ring-[#7E0E32]/10 dark:ring-white/10 shrink-0 transition-transform duration-200 group-hover:scale-105"
             />
             <div>
-              <h1 className="text-base font-extrabold text-slate-900">
-                SaheliShield
+              <h1 className="font-serif-editorial text-xl font-bold tracking-tight text-[#7E0E32] dark:text-[#FB7185] leading-none select-none">
+                Saheli<span className="text-[#111318] dark:text-[#F1F5F9]">Shield</span>
               </h1>
-              <p className="text-[11px] text-purple-700 font-medium">
-                Safety & Threat Protection
+              <p className="text-[10px] text-[#7E0E32]/80 dark:text-[#FB7185]/80 font-bold tracking-wider uppercase leading-none mt-1">
+                Safety & Protection
               </p>
             </div>
           </button>
 
           <button
             type="button"
-            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className="rounded-xl p-1.5 text-[#6B7280] dark:text-[#94A3B8] transition hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#111318] dark:hover:text-[#F1F5F9] cursor-pointer"
             onClick={() => setOpen(false)}
             aria-label="Close sidebar"
           >
-            <X size={20} />
+            <X size={19} />
           </button>
         </div>
 
-        <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <p className="mb-2 px-3 text-[10px] font-extrabold uppercase tracking-widest text-[#6B7280] dark:text-[#64748B]">
           Navigation
         </p>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto">
+        <nav className="flex-1 space-y-1.5 overflow-y-auto">
           {items.map((item) => {
             const Icon = item.icon;
             const active = page === item.id;
@@ -98,12 +98,12 @@ export default function Sidebar({ page, setPage, open, setOpen, user, onLogout }
                   setPage(item.id);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${active
-                    ? "bg-purple-50 text-purple-800 font-semibold"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                className={`flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left text-xs font-bold transition cursor-pointer ${active
+                    ? "bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185] shadow-2xs"
+                    : "text-[#4B5563] dark:text-[#94A3B8] hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#111318] dark:hover:text-[#F1F5F9]"
                   }`}
               >
-                <Icon size={19} className={active ? "text-purple-700" : "text-slate-400"} />
+                <Icon size={18} className={active ? "text-[#7E0E32] dark:text-[#FB7185]" : "text-[#6B7280] dark:text-[#64748B]"} />
                 {item.label}
               </button>
             );
@@ -111,28 +111,28 @@ export default function Sidebar({ page, setPage, open, setOpen, user, onLogout }
         </nav>
 
         {/* Safety Tip Card */}
-        <div className="rounded-2xl bg-purple-50/70 p-3.5 mt-3 border border-purple-100/60">
-          <p className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
-            <ShieldCheck size={15} className="text-purple-700" />
+        <div className="rounded-2xl bg-[#7E0E32]/5 dark:bg-[#FB7185]/5 p-3.5 mt-3 border border-[#DEC4CB] dark:border-[#253146]">
+          <p className="text-xs font-bold text-[#7E0E32] dark:text-[#FB7185] flex items-center gap-1.5">
+            <ShieldCheck size={15} className="text-[#7E0E32] dark:text-[#FB7185]" />
             Your Safety Companion
           </p>
-          <p className="mt-1 text-[11px] leading-4 text-purple-900/80">
+          <p className="mt-1 text-[11px] leading-4 text-[#4B5563] dark:text-[#94A3B8]">
             Emergency helpline 112 is active 24/7. Stay connected.
           </p>
         </div>
 
         {/* User profile & Sign out */}
         {user && (
-          <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2">
+          <div className="mt-4 pt-3.5 border-t border-[#E8D7DC] dark:border-[#253146] flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-xs font-bold text-purple-800">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7E0E32] to-[#2D0B40] text-xs font-bold text-white shadow-xs">
                 {(user.name || user.fullName || user.email || "U").charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-800 truncate">
+                <p className="text-xs font-bold text-[#111318] dark:text-[#F1F5F9] truncate">
                   {user.name || user.fullName || "User"}
                 </p>
-                <p className="text-[10px] text-slate-400 truncate">
+                <p className="text-[10px] text-[#6B7280] dark:text-[#94A3B8] truncate">
                   {user.email || ""}
                 </p>
               </div>
@@ -144,10 +144,10 @@ export default function Sidebar({ page, setPage, open, setOpen, user, onLogout }
                   setOpen(false);
                   onLogout();
                 }}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition shrink-0"
+                className="p-1.5 rounded-lg text-[#6B7280] dark:text-[#94A3B8] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition shrink-0 cursor-pointer"
                 title="Sign out"
               >
-                <LogOut size={16} />
+                <LogOut size={15} />
               </button>
             )}
           </div>

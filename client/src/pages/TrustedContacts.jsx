@@ -239,45 +239,40 @@ export default function TrustedContacts() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 font-sans-ui">
       <section>
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-violet-100 p-3 text-violet-700">
-            <Users size={27} />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185] shadow-2xs shrink-0">
+            <Users size={25} />
           </div>
 
           <div>
-            <p className="text-sm font-medium text-violet-700">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#7E0E32] dark:text-[#FB7185]">
               YOUR SAFETY NETWORK
             </p>
-
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+            <h1 className="font-serif-editorial text-3xl font-bold text-[#111318] dark:text-[#F8FAFC] sm:text-4xl">
               Trusted Contacts
             </h1>
           </div>
         </div>
 
-        <p className="mt-4 max-w-2xl text-slate-500">
-          Manage the people you trust in an emergency. SaheliShield
-          uses their saved email addresses for SOS alerts. Keep their
-          phone numbers available for contact purposes and always
-          obtain their consent before adding them.
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#6B7280] dark:text-[#94A3B8]">
+          Manage the people you have chosen to contact in an emergency. SOS alerts use their saved email address; keep their phone number for contact details. Always confirm their permission before adding them.
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-3xl border border-[#E8D7DC] dark:border-[#253146] bg-white dark:bg-[#161D2B] p-5 shadow-sm sm:p-7">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-emerald-50 p-3 text-emerald-700">
-              <HeartHandshake size={22} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0D9488]/10 dark:bg-[#2DD4BF]/15 text-[#0D9488] dark:text-[#2DD4BF]">
+              <HeartHandshake size={20} />
             </div>
 
             <div>
-              <h2 className="font-semibold text-slate-900">
+              <h2 className="font-bold text-[#111318] dark:text-[#F8FAFC]">
                 Your trusted people
               </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-0.5 text-xs text-[#6B7280] dark:text-[#94A3B8]">
                 {loading
                   ? "Loading contacts..."
                   : `${contacts.length} ${
@@ -287,15 +282,15 @@ export default function TrustedContacts() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5">
             <button
               type="button"
               onClick={loadContacts}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-3.5 py-2 text-xs font-semibold text-[#111318] dark:text-[#F8FAFC] hover:bg-[#FFF4EC] dark:hover:bg-[#253146] disabled:opacity-50 transition"
             >
               <RefreshCw
-                size={16}
+                size={14}
                 className={loading ? "animate-spin" : ""}
               />
               Refresh
@@ -304,9 +299,9 @@ export default function TrustedContacts() {
             <button
               type="button"
               onClick={openAddForm}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-800"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7E0E32] hover:bg-[#5D0A24] dark:bg-[#FB7185] dark:text-[#0B0E14] dark:hover:bg-[#F43F5E] px-4 py-2 text-xs font-bold text-white shadow-sm transition"
             >
-              <UserPlus size={17} />
+              <UserPlus size={15} />
               Add contact
             </button>
           </div>
@@ -315,9 +310,9 @@ export default function TrustedContacts() {
         {error && (
           <div
             role="alert"
-            className="mt-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+            className="mt-5 flex items-start gap-2 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-4 text-xs font-medium text-red-800 dark:text-red-300"
           >
-            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -325,9 +320,9 @@ export default function TrustedContacts() {
         {notice && (
           <div
             role="status"
-            className="mt-5 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+            className="mt-5 flex items-start gap-2 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 p-4 text-xs font-medium text-emerald-800 dark:text-emerald-300"
           >
-            <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+            <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
             <span>{notice}</span>
           </div>
         )}
@@ -335,10 +330,10 @@ export default function TrustedContacts() {
         {formOpen && (
           <form
             onSubmit={handleSubmit}
-            className="mt-6 space-y-4 rounded-xl border border-violet-200 bg-violet-50/40 p-4 sm:p-5"
+            className="mt-6 space-y-4 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-[#FFF9F5] dark:bg-[#111622] p-4 sm:p-6"
           >
             <div className="flex items-center justify-between gap-3">
-              <h3 className="font-semibold text-slate-900">
+              <h3 className="font-bold text-[#111318] dark:text-[#F8FAFC]">
                 {editingId ? "Edit trusted contact" : "Add trusted contact"}
               </h3>
 
@@ -347,9 +342,9 @@ export default function TrustedContacts() {
                 onClick={closeForm}
                 disabled={saving}
                 aria-label="Close form"
-                className="rounded-lg p-2 text-slate-500 hover:bg-white disabled:opacity-50"
+                className="rounded-lg p-1.5 text-[#6B7280] dark:text-[#94A3B8] hover:bg-white dark:hover:bg-[#1E293B] disabled:opacity-50 transition"
               >
-                <X size={19} />
+                <X size={18} />
               </button>
             </div>
 
@@ -357,7 +352,7 @@ export default function TrustedContacts() {
               <div>
                 <label
                   htmlFor="contact-name"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#6B7280] dark:text-[#94A3B8]"
                 >
                   Full name
                 </label>
@@ -371,14 +366,14 @@ export default function TrustedContacts() {
                   autoComplete="name"
                   required
                   placeholder="Enter contact name"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
+                  className="w-full rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-3.5 py-2.5 text-sm text-[#111318] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#7E0E32] dark:focus:border-[#FB7185] focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="contact-phone"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#6B7280] dark:text-[#94A3B8]"
                 >
                   Phone number
                 </label>
@@ -392,10 +387,9 @@ export default function TrustedContacts() {
                   autoComplete="tel"
                   required
                   placeholder="+919876543210"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
+                  className="w-full rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-3.5 py-2.5 text-sm text-[#111318] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#7E0E32] dark:focus:border-[#FB7185] focus:outline-none transition-colors"
                 />
-
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-[11px] text-[#6B7280] dark:text-[#94A3B8]">
                   Include the country code.
                 </p>
               </div>
@@ -403,7 +397,7 @@ export default function TrustedContacts() {
               <div>
                 <label
                   htmlFor="contact-email"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#6B7280] dark:text-[#94A3B8]"
                 >
                   Email address
                   {editingId && (
@@ -422,10 +416,9 @@ export default function TrustedContacts() {
                   required={!editingId}
                   disabled={Boolean(editingId)}
                   placeholder="trustedperson@example.com"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                  className="w-full rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-3.5 py-2.5 text-sm text-[#111318] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#7E0E32] dark:focus:border-[#FB7185] focus:outline-none transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 />
-
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-[11px] text-[#6B7280] dark:text-[#94A3B8]">
                   {editingId
                     ? "Email is fixed after the contact is created and is used for SOS alerts."
                     : "SOS alerts will be sent to this email address."}
@@ -435,7 +428,7 @@ export default function TrustedContacts() {
               <div className="sm:col-span-2">
                 <label
                   htmlFor="contact-relationship"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#6B7280] dark:text-[#94A3B8]"
                 >
                   Relationship (optional)
                 </label>
@@ -447,43 +440,39 @@ export default function TrustedContacts() {
                   onChange={updateField}
                   maxLength={60}
                   placeholder="e.g. Parent, friend, sibling"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
+                  className="w-full rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-3.5 py-2.5 text-sm text-[#111318] dark:text-[#F8FAFC] placeholder:text-[#94A3B8] focus:border-[#7E0E32] dark:focus:border-[#FB7185] focus:outline-none transition-colors"
                 />
               </div>
             </div>
 
-            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3">
+            <label className="flex items-start gap-3 rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] p-3 cursor-pointer">
               <input
                 type="checkbox"
                 name="consentGiven"
                 checked={form.consentGiven}
                 onChange={updateField}
                 required
-                className="mt-1 h-4 w-4 accent-violet-700"
+                className="mt-0.5 h-4 w-4 rounded accent-[#7E0E32] dark:accent-[#FB7185]"
               />
-
-              <span className="text-sm leading-6 text-slate-700">
-                This person has agreed to be my trusted contact and to
-                receive safety alerts when needed.
+              <span className="text-xs leading-5 text-[#6B7280] dark:text-[#94A3B8]">
+                This person has agreed to be my trusted contact and to receive
+                safety alerts when needed.
               </span>
             </label>
 
             {formError && (
-              <p role="alert" className="text-sm text-red-700">
+              <p role="alert" className="text-xs font-semibold text-red-600 dark:text-red-400">
                 {formError}
               </p>
             )}
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2.5 pt-1">
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-700 px-5 py-3 text-sm font-semibold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7E0E32] hover:bg-[#5D0A24] dark:bg-[#FB7185] dark:text-[#0B0E14] dark:hover:bg-[#F43F5E] px-4 py-2.5 text-xs font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50 transition"
               >
-                {saving && (
-                  <RefreshCw size={16} className="animate-spin" />
-                )}
-
+                {saving && <RefreshCw size={14} className="animate-spin" />}
                 {saving
                   ? "Saving..."
                   : editingId
@@ -495,7 +484,7 @@ export default function TrustedContacts() {
                 type="button"
                 onClick={closeForm}
                 disabled={saving}
-                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-4 py-2.5 text-xs font-semibold text-[#111318] dark:text-[#CBD5E1] hover:bg-[#FFF4EC] dark:hover:bg-[#253146] disabled:opacity-50 transition"
               >
                 Cancel
               </button>
@@ -505,28 +494,9 @@ export default function TrustedContacts() {
 
         <div className="mt-6 space-y-3">
           {loading && (
-            <div className="py-10 text-center text-slate-500">
-              <RefreshCw
-                size={25}
-                className="mx-auto animate-spin"
-              />
-              <p className="mt-3 text-sm">
-                Loading your saved contacts...
-              </p>
-            </div>
-          )}
-
-          {!loading && !error && contacts.length === 0 && (
-            <div className="rounded-xl border border-dashed border-slate-300 py-10 text-center">
-              <Users size={32} className="mx-auto text-slate-400" />
-
-              <h3 className="mt-3 font-semibold text-slate-800">
-                No trusted contacts yet
-              </h3>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Add someone you trust to receive your email SOS alerts.
-              </p>
+            <div className="py-10 text-center text-[#6B7280] dark:text-[#94A3B8]">
+              <RefreshCw size={24} className="mx-auto animate-spin text-[#7E0E32] dark:text-[#FB7185]" />
+              <p className="mt-3 text-xs">Loading your saved contacts...</p>
             </div>
           )}
 
@@ -538,24 +508,24 @@ export default function TrustedContacts() {
               return (
                 <article
                   key={id}
-                  className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center"
+                  className="flex flex-col gap-4 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-[#FFFDFB] dark:bg-[#1A2233] p-4 sm:p-5 transition hover:border-[#7E0E32]/30 sm:flex-row sm:items-center"
                 >
                   <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="rounded-full bg-violet-100 p-3 text-violet-700">
-                      <Users size={21} />
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185]">
+                      <Users size={20} />
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="break-words font-semibold text-slate-900">
+                        <h3 className="break-words font-bold text-[#111318] dark:text-[#F8FAFC]">
                           {contact.name || "Unnamed contact"}
                         </h3>
 
                         <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
                             hasConsent
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-amber-50 text-amber-700"
+                              ? "bg-[#0D9488]/10 text-[#0D9488] dark:bg-[#2DD4BF]/15 dark:text-[#2DD4BF]"
+                              : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
                           }`}
                         >
                           {hasConsent
@@ -564,37 +534,39 @@ export default function TrustedContacts() {
                         </span>
                       </div>
 
-                      <p className="mt-2 flex items-center gap-2 break-all text-sm text-slate-600">
-                        <Phone size={15} className="shrink-0" />
+                      <p className="mt-2 flex items-center gap-2 break-all text-xs text-[#6B7280] dark:text-[#94A3B8]">
+                        <Phone size={13} className="shrink-0 text-[#7E0E32] dark:text-[#FB7185]" />
                         {contact.phone || "No phone number"}
                       </p>
 
-                      <p className="mt-2 flex items-center gap-2 break-all text-sm text-slate-600">
-                        <Mail size={15} className="shrink-0" />
+                      <p className="mt-1.5 flex items-center gap-2 break-all text-xs text-[#6B7280] dark:text-[#94A3B8]">
+                        <Mail size={13} className="shrink-0 text-[#7E0E32] dark:text-[#FB7185]" />
                         {contact.email || "No email address saved"}
                       </p>
 
                       {contact.relationship && (
-                        <p className="mt-2 text-sm text-slate-500">
+                        <p className="mt-1 text-xs font-medium text-[#7E0E32] dark:text-[#FB7185]">
                           Relationship: {contact.relationship}
                         </p>
                       )}
 
-                      <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
-                        <ShieldCheck size={14} />
-                        Email SOS recipient
+                      <p className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6B7280] dark:text-[#94A3B8]">
+                        <ShieldCheck size={13} className="text-[#0D9488] dark:text-[#2DD4BF] shrink-0" />
+                        {hasConsent
+                          ? "Email SOS recipient · Eligible for emergency alerts"
+                          : "Not eligible for SOS notification when consent is required."}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 gap-2 sm:flex-col">
+                  <div className="flex shrink-0 gap-2 sm:justify-end">
                     <button
                       type="button"
                       onClick={() => openEditForm(contact)}
                       disabled={Boolean(deletingId)}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-3 py-1.5 text-xs font-semibold text-[#111318] dark:text-[#CBD5E1] hover:bg-[#FFF4EC] dark:hover:bg-[#253146] disabled:opacity-50 transition"
                     >
-                      <Pencil size={15} />
+                      <Pencil size={13} />
                       Edit
                     </button>
 
@@ -602,22 +574,53 @@ export default function TrustedContacts() {
                       type="button"
                       onClick={() => handleDelete(contact)}
                       disabled={deletingId === id}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/20 px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-400 hover:bg-red-100/60 dark:hover:bg-red-950/40 disabled:opacity-50 transition"
                     >
                       {deletingId === id ? (
-                        <RefreshCw size={15} className="animate-spin" />
+                        <RefreshCw size={13} className="animate-spin" />
                       ) : (
-                        <Trash2 size={15} />
+                        <Trash2 size={13} />
                       )}
-
                       {deletingId === id ? "Removing..." : "Remove"}
                     </button>
                   </div>
                 </article>
               );
             })}
+
+          {!loading && contacts.length === 0 && !error && (
+            <div className="rounded-2xl border border-dashed border-[#DEC4CB] dark:border-[#253146] bg-[#FFF9F5]/50 dark:bg-[#111622]/50 px-5 py-12 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185]">
+                <Users size={24} />
+              </div>
+              <h3 className="mt-3.5 font-bold text-[#111318] dark:text-[#F8FAFC]">
+                No trusted contacts yet
+              </h3>
+              <p className="mt-1 text-xs text-[#6B7280] dark:text-[#94A3B8]">
+                Add someone who has agreed to receive your safety alerts.
+              </p>
+              <button
+                type="button"
+                onClick={openAddForm}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#7E0E32] hover:bg-[#5D0A24] dark:bg-[#FB7185] dark:text-[#0B0E14] dark:hover:bg-[#F43F5E] px-4 py-2 text-xs font-bold text-white shadow-sm transition"
+              >
+                <UserPlus size={15} />
+                Add your first contact
+              </button>
+            </div>
+          )}
         </div>
       </section>
+
+      <div className="flex items-start gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-[#FFF9F5] dark:bg-[#111622] p-4 text-xs leading-relaxed text-[#6B7280] dark:text-[#94A3B8]">
+        <ShieldCheck size={18} className="mt-0.5 shrink-0 text-[#0D9488] dark:text-[#2DD4BF]" />
+        <p>
+          <strong className="text-[#111318] dark:text-[#F8FAFC]">Safety reminder:</strong> Saving a contact does not guarantee
+          SMS delivery. SOS delivery depends on backend processing, valid
+          recipient numbers, provider configuration, and network availability.
+          Never rely on this prototype as your only emergency channel.
+        </p>
+      </div>
     </div>
   );
 }

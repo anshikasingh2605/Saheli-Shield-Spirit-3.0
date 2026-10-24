@@ -8,12 +8,13 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  ArrowLeft,
   Info,
 } from "lucide-react";
 
 import api from "../services/api";
 
-export default function Auth({ onLogin }) {
+export default function Auth({ onLogin, onBack }) {
   const [mode, setMode] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -149,106 +150,144 @@ export default function Auth({ onLogin }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-[#FFF9F5] dark:bg-[#0B0E14] text-[#111318] dark:text-[#F1F5F9] font-sans-ui transition-colors">
       {/* Left information panel */}
-      <section className="hidden w-1/2 flex-col justify-between bg-violet-800 p-12 text-white lg:flex">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-white/15 p-3">
-            <ShieldCheck size={28} />
-          </div>
+      <section className="relative hidden w-1/2 flex-col justify-between bg-gradient-to-br from-[#2D0B40] via-[#5A0A26] to-[#7E0E32] p-12 text-white lg:flex overflow-hidden">
+        {/* Soft atmospheric gradient glow */}
+        <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-[#FB7185]/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-black/40 blur-3xl" />
 
-          <div>
-            <h1 className="text-xl font-bold">
-              SaheliShield
-            </h1>
-            <p className="text-sm text-violet-200">
-              One shield for safety everywhere
-            </p>
+        <div className="relative z-10">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="mb-8 inline-flex items-center gap-2.5 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white/95 shadow-sm backdrop-blur-md transition-all duration-200 hover:bg-white/20 hover:border-white/40 hover:shadow-md active:scale-95 cursor-pointer group"
+            >
+              <ArrowLeft size={15} className="transition-transform duration-200 group-hover:-translate-x-1 text-rose-200" />
+              <span>Back to SaheliShield</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="SaheliShield"
+              className="h-11 w-11 rounded-xl object-contain shadow-md ring-1 ring-white/20"
+            />
+            <div>
+              <h1 className="font-serif-editorial text-2xl font-bold tracking-tight text-white leading-none">
+                SaheliShield
+              </h1>
+              <p className="text-xs text-rose-200/90 font-medium mt-0.5">
+                One shield for safety everywhere
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="max-w-lg">
-          <div className="mb-6 inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm">
+        <div className="relative z-10 max-w-lg">
+          <div className="mb-6 inline-flex rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-xs font-bold tracking-wider uppercase text-rose-100 backdrop-blur-xs">
             Your safety. Your control.
           </div>
 
-          <h2 className="text-5xl font-bold leading-tight">
+          <h2 className="font-serif-editorial text-4xl sm:text-5xl font-bold leading-tight text-white">
             Feel safer in every journey and every click.
           </h2>
 
-          <p className="mt-6 text-lg leading-8 text-violet-100">
+          <p className="mt-6 text-base leading-relaxed text-rose-100/90 font-medium">
             Plan journeys with confidence and recognize
             potential digital scams with your personal
             safety workspace.
           </p>
 
-          <div className="mt-8 space-y-4 text-sm text-violet-100">
+          <div className="mt-8 space-y-3.5 text-sm font-semibold text-rose-100/95">
             <p className="flex items-center gap-3">
-              <ShieldCheck size={19} />
-              Travel safety tools
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15">
+                <ShieldCheck size={16} className="text-amber-300" />
+              </span>
+              Travel safety tools & crowd-verified corridors
             </p>
 
             <p className="flex items-center gap-3">
-              <ShieldCheck size={19} />
-              Scam awareness and prevention
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15">
+                <ShieldCheck size={16} className="text-amber-300" />
+              </span>
+              AI-powered digital scam & fraud detection
             </p>
 
             <p className="flex items-center gap-3">
-              <ShieldCheck size={19} />
-              A connected safety experience
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15">
+                <ShieldCheck size={16} className="text-amber-300" />
+              </span>
+              Emergency SMS alert network for trusted contacts
             </p>
           </div>
         </div>
 
-        <p className="text-sm text-violet-200">
-          SaheliShield · Safety for everyday life
+        <p className="relative z-10 text-xs text-rose-200/80 font-medium">
+          SaheliShield · Built for safety & empowerment
         </p>
       </section>
 
       {/* Authentication form */}
       <section className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10">
         <div className="w-full max-w-md">
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <div className="rounded-xl bg-violet-700 p-3 text-white">
-              <ShieldCheck size={25} />
+          {onBack && (
+            <div className="mb-6 lg:hidden">
+              <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/90 dark:bg-[#161D2B]/90 px-4 py-2 text-xs font-bold text-[#111318] dark:text-[#F1F5F9] shadow-xs backdrop-blur-md hover:border-[#7E0E32] dark:hover:border-[#FB7185] transition-all active:scale-95 cursor-pointer group"
+              >
+                <ArrowLeft size={14} className="transition-transform duration-200 group-hover:-translate-x-1 text-[#7E0E32] dark:text-[#FB7185]" />
+                <span>Back to SaheliShield</span>
+              </button>
             </div>
+          )}
 
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <img
+              src="/logo.png"
+              alt="SaheliShield"
+              className="h-10 w-10 rounded-xl object-contain shadow-xs ring-1 ring-[#7E0E32]/10 dark:ring-white/10"
+            />
             <div>
-              <h1 className="text-xl font-bold text-slate-900">
-                SaheliShield
+              <h1 className="font-serif-editorial text-2xl font-bold tracking-tight text-[#7E0E32] dark:text-[#FB7185] leading-none">
+                Saheli<span className="text-[#111318] dark:text-[#F1F5F9]">Shield</span>
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#6B7280] dark:text-[#94A3B8]">
                 One shield for safety everywhere
               </p>
             </div>
           </div>
 
-          <p className="text-sm font-semibold uppercase tracking-wider text-violet-700">
+          <p className="text-xs font-extrabold uppercase tracking-widest text-[#7E0E32] dark:text-[#FB7185]">
             Welcome to SaheliShield
           </p>
 
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+          <h2 className="font-serif-editorial mt-2 text-3xl sm:text-4xl font-bold tracking-tight text-[#111318] dark:text-[#F8FAFC]">
             {isRegister
               ? "Create your account"
               : "Welcome back"}
           </h2>
 
-          <p className="mt-3 text-sm leading-6 text-slate-500">
+          <p className="mt-3 text-sm leading-6 text-[#6B7280] dark:text-[#94A3B8]">
             {isRegister
               ? "Create an account to get started with your safety workspace."
               : "Sign in to access your personal safety workspace."}
           </p>
 
           {/* Login and registration tabs */}
-          <div className="mt-7 grid grid-cols-2 rounded-xl bg-slate-100 p-1">
+          <div className="mt-7 grid grid-cols-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/80 dark:bg-[#161D2B]/80 p-1">
             <button
               type="button"
               disabled={loading}
               onClick={() => changeMode("login")}
-              className={`rounded-lg py-2.5 text-sm font-semibold transition ${
+              className={`rounded-full py-2.5 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 !isRegister
-                  ? "bg-white text-violet-700 shadow-sm"
-                  : "text-slate-500"
+                  ? "bg-[#7E0E32] text-white shadow-xs"
+                  : "text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111318] dark:hover:text-[#F1F5F9]"
               }`}
             >
               Sign in
@@ -258,10 +297,10 @@ export default function Auth({ onLogin }) {
               type="button"
               disabled={loading}
               onClick={() => changeMode("register")}
-              className={`rounded-lg py-2.5 text-sm font-semibold transition ${
+              className={`rounded-full py-2.5 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 isRegister
-                  ? "bg-white text-violet-700 shadow-sm"
-                  : "text-slate-500"
+                  ? "bg-[#7E0E32] text-white shadow-xs"
+                  : "text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111318] dark:hover:text-[#F1F5F9]"
               }`}
             >
               Create account
@@ -277,15 +316,15 @@ export default function Auth({ onLogin }) {
               <div>
                 <label
                   htmlFor="auth-name"
-                  className="mb-2 block text-sm font-medium text-slate-700"
+                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#4B5563] dark:text-[#94A3B8]"
                 >
                   Full name
                 </label>
 
-                <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 focus-within:border-violet-500">
+                <div className="flex items-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3.5 focus-within:border-[#7E0E32] dark:focus-within:border-[#FB7185] focus-within:ring-2 focus-within:ring-[#7E0E32]/15">
                   <UserRound
                     size={18}
-                    className="text-slate-400"
+                    className="text-[#6B7280] dark:text-[#94A3B8]"
                   />
 
                   <input
@@ -299,7 +338,7 @@ export default function Auth({ onLogin }) {
                     maxLength={80}
                     required
                     disabled={loading}
-                    className="w-full py-3 outline-none"
+                    className="w-full py-3 outline-none text-sm text-[#111318] dark:text-[#F1F5F9] bg-transparent"
                   />
                 </div>
               </div>
@@ -309,15 +348,15 @@ export default function Auth({ onLogin }) {
             <div>
               <label
                 htmlFor="auth-email"
-                className="mb-2 block text-sm font-medium text-slate-700"
+                className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#4B5563] dark:text-[#94A3B8]"
               >
                 Email address
               </label>
 
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 focus-within:border-violet-500">
+              <div className="flex items-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3.5 focus-within:border-[#7E0E32] dark:focus-within:border-[#FB7185] focus-within:ring-2 focus-within:ring-[#7E0E32]/15">
                 <Mail
                   size={18}
-                  className="text-slate-400"
+                  className="text-[#6B7280] dark:text-[#94A3B8]"
                 />
 
                 <input
@@ -331,7 +370,7 @@ export default function Auth({ onLogin }) {
                   placeholder="you@example.com"
                   required
                   disabled={loading}
-                  className="w-full py-3 outline-none"
+                  className="w-full py-3 outline-none text-sm text-[#111318] dark:text-[#F1F5F9] bg-transparent"
                 />
               </div>
             </div>
@@ -340,15 +379,15 @@ export default function Auth({ onLogin }) {
             <div>
               <label
                 htmlFor="auth-password"
-                className="mb-2 block text-sm font-medium text-slate-700"
+                className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#4B5563] dark:text-[#94A3B8]"
               >
                 Password
               </label>
 
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 focus-within:border-violet-500">
+              <div className="flex items-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3.5 focus-within:border-[#7E0E32] dark:focus-within:border-[#FB7185] focus-within:ring-2 focus-within:ring-[#7E0E32]/15">
                 <LockKeyhole
                   size={18}
-                  className="text-slate-400"
+                  className="text-[#6B7280] dark:text-[#94A3B8]"
                 />
 
                 <input
@@ -367,7 +406,7 @@ export default function Auth({ onLogin }) {
                   minLength={8}
                   required
                   disabled={loading}
-                  className="w-full py-3 outline-none"
+                  className="w-full py-3 outline-none text-sm text-[#111318] dark:text-[#F1F5F9] bg-transparent"
                 />
 
                 <button
@@ -380,7 +419,7 @@ export default function Auth({ onLogin }) {
                       ? "Hide password"
                       : "Show password"
                   }
-                  className="text-slate-400 hover:text-slate-700"
+                  className="text-[#6B7280] dark:text-[#94A3B8] hover:text-[#111318] dark:hover:text-[#F1F5F9] cursor-pointer"
                 >
                   {showPassword ? (
                     <EyeOff size={18} />
@@ -396,24 +435,30 @@ export default function Auth({ onLogin }) {
               <div>
                 <label
                   htmlFor="auth-confirm-password"
-                  className="mb-2 block text-sm font-medium text-slate-700"
+                  className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#4B5563] dark:text-[#94A3B8]"
                 >
                   Confirm password
                 </label>
 
-                <input
-                  id="auth-confirm-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(event) =>
-                    setConfirmPassword(event.target.value)
-                  }
-                  placeholder="Re-enter your password"
-                  required
-                  disabled={loading}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
-                />
+                <div className="flex items-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3.5 focus-within:border-[#7E0E32] dark:focus-within:border-[#FB7185] focus-within:ring-2 focus-within:ring-[#7E0E32]/15">
+                  <LockKeyhole
+                    size={18}
+                    className="text-[#6B7280] dark:text-[#94A3B8]"
+                  />
+                  <input
+                    id="auth-confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(event) =>
+                      setConfirmPassword(event.target.value)
+                    }
+                    placeholder="Re-enter your password"
+                    required
+                    disabled={loading}
+                    className="w-full py-3 outline-none text-sm text-[#111318] dark:text-[#F1F5F9] bg-transparent"
+                  />
+                </div>
               </div>
             )}
 
@@ -421,7 +466,7 @@ export default function Auth({ onLogin }) {
             {error && (
               <p
                 role="alert"
-                className="rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-700"
+                className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-3.5 text-xs font-bold text-red-700 dark:text-red-300"
               >
                 {error}
               </p>
@@ -431,11 +476,11 @@ export default function Auth({ onLogin }) {
             {notice && (
               <div
                 role="status"
-                className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm leading-6 text-amber-900"
+                className="flex items-start gap-2 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-3.5 text-xs font-bold leading-5 text-amber-900 dark:text-amber-200"
               >
                 <Info
-                  className="mt-1 shrink-0"
-                  size={17}
+                  className="mt-0.5 shrink-0"
+                  size={16}
                 />
                 {notice}
               </div>
@@ -445,7 +490,7 @@ export default function Auth({ onLogin }) {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 py-3.5 font-semibold text-white transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#7E0E32] hover:bg-[#5D0A24] dark:bg-[#9B123E] dark:hover:bg-[#7E0E32] px-4 py-3.5 text-sm font-bold text-white shadow-md shadow-[#7E0E32]/20 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
             >
               {loading
                 ? "Please wait..."
@@ -453,11 +498,11 @@ export default function Auth({ onLogin }) {
                   ? "Create account"
                   : "Sign in"}
 
-              {!loading && <ArrowRight size={18} />}
+              {!loading && <ArrowRight size={16} />}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs leading-5 text-slate-400">
+          <p className="mt-6 text-center text-xs leading-5 text-[#6B7280] dark:text-[#94A3B8]">
             By continuing, you agree to use SaheliShield
             responsibly. Never share your password or
             authentication credentials with anyone.

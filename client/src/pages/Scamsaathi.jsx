@@ -161,38 +161,38 @@ export default function ScamSaathi() {
   const RiskIcon = risk?.icon;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6 font-sans-ui">
       <section>
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-emerald-100 p-3 text-emerald-700">
-            <ShieldCheck size={27} />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0D9488]/10 dark:bg-[#2DD4BF]/15 text-[#0D9488] dark:text-[#2DD4BF] shadow-2xs shrink-0">
+            <ShieldCheck size={26} />
           </div>
 
           <div>
-            <p className="text-sm font-medium text-emerald-700">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#0D9488] dark:text-[#2DD4BF]">
               DIGITAL SAFETY ASSISTANT
             </p>
 
-            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+            <h2 className="font-serif-editorial text-3xl font-bold text-[#111318] dark:text-[#F8FAFC] sm:text-4xl">
               Think before you trust.
             </h2>
           </div>
         </div>
 
-        <p className="mt-4 max-w-2xl leading-7 text-slate-500">
+        <p className="mt-3 max-w-2xl leading-relaxed text-sm sm:text-base text-[#4B5563] dark:text-[#94A3B8]">
           Paste a suspicious message, job offer, payment request,
           or URL to check for common scam warning signs.
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+      <section className="rounded-3xl border border-[#E8D7DC] dark:border-[#253146] bg-white dark:bg-[#161D2B] p-5 shadow-xs sm:p-7">
         <div className="mb-5 flex items-center gap-2">
           <MessageSquareText
-            className="text-emerald-700"
-            size={21}
+            className="text-[#0D9488] dark:text-[#2DD4BF]"
+            size={20}
           />
 
-          <h3 className="font-semibold text-slate-900">
+          <h3 className="font-serif-editorial text-xl font-bold text-[#111318] dark:text-[#F1F5F9]">
             Analyze suspicious content
           </h3>
         </div>
@@ -200,7 +200,7 @@ export default function ScamSaathi() {
         <form onSubmit={handleAnalyze}>
           <label
             htmlFor="scam-message"
-            className="mb-2 block text-sm font-medium text-slate-700"
+            className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#4B5563] dark:text-[#94A3B8]"
           >
             Message, link, or offer
           </label>
@@ -218,16 +218,16 @@ export default function ScamSaathi() {
             required
             disabled={loading}
             placeholder="Paste the suspicious message here..."
-            className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:opacity-60"
+            className="w-full resize-y rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-[#FFF9F5] dark:bg-[#0B0E14] text-[#111318] dark:text-[#F1F5F9] p-4 text-sm leading-relaxed outline-none transition placeholder:text-[#6B7280] dark:placeholder:text-[#64748B] focus:border-[#0D9488] dark:focus:border-[#2DD4BF] focus:ring-2 focus:ring-[#0D9488]/15 disabled:opacity-60"
           />
 
-          <div className="mt-2 flex justify-between gap-3 text-xs text-slate-400">
+          <div className="mt-2 flex justify-between gap-3 text-xs text-[#6B7280] dark:text-[#64748B]">
             <span>Do not include real passwords or OTPs.</span>
             <span>{message.length}/5000</span>
           </div>
 
           <div className="mt-5">
-            <p className="mb-3 text-sm font-medium text-slate-700">
+            <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-[#4B5563] dark:text-[#94A3B8]">
               Try a sample
             </p>
 
@@ -245,9 +245,9 @@ export default function ScamSaathi() {
                       setResult(null);
                       setError("");
                     }}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-emerald-300 hover:bg-emerald-50 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/90 dark:bg-[#161D2B] px-3.5 py-1.5 text-xs font-bold text-[#4B5563] dark:text-[#CBD5E1] transition hover:border-[#0D9488] hover:text-[#0D9488] dark:hover:text-[#2DD4BF] disabled:opacity-50 cursor-pointer shadow-2xs"
                   >
-                    <Icon size={15} />
+                    <Icon size={14} />
                     {example.label}
                   </button>
                 );
@@ -258,7 +258,7 @@ export default function ScamSaathi() {
           {error && (
             <p
               role="alert"
-              className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700"
+              className="mt-5 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-3.5 text-xs font-bold leading-5 text-red-700 dark:text-red-300"
             >
               {error}
             </p>
@@ -268,7 +268,7 @@ export default function ScamSaathi() {
             <button
               type="submit"
               disabled={!message.trim() || loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0D9488] hover:bg-[#0F766E] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#0D9488]/20 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <LoaderCircle
@@ -286,7 +286,7 @@ export default function ScamSaathi() {
               type="button"
               onClick={resetForm}
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] px-5 py-3 text-sm font-bold text-[#111318] dark:text-[#F1F5F9] hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 transition cursor-pointer"
             >
               <RotateCcw size={16} />
               Reset
@@ -298,7 +298,7 @@ export default function ScamSaathi() {
       {result && risk && (
         <section
           aria-live="polite"
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7"
+          className="rounded-3xl border border-[#E8D7DC] dark:border-[#253146] bg-white dark:bg-[#161D2B] p-5 shadow-xs sm:p-7"
         >
           <div className="flex items-start gap-3">
             <RiskIcon
@@ -307,29 +307,29 @@ export default function ScamSaathi() {
             />
 
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#6B7280] dark:text-[#64748B]">
                 Backend analysis result
               </p>
 
-              <h3 className="mt-1 text-xl font-bold text-slate-900">
+              <h3 className="font-serif-editorial mt-1 text-2xl font-bold text-[#111318] dark:text-[#F1F5F9]">
                 {riskLabels[result.riskLevel] ||
                   result.riskLevel.replaceAll("_", " ")}
               </h3>
 
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+              <p className="mt-2 text-sm leading-relaxed text-[#4B5563] dark:text-[#94A3B8]">
                 {result.explanation ||
                   "The analysis has completed. Review the warning signs and recommended actions below."}
               </p>
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3.5 flex flex-wrap gap-2">
                 <span
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${risk.background} ${risk.color} ${risk.border}`}
+                  className={`rounded-full border px-3 py-1 text-xs font-bold ${risk.background} ${risk.color} ${risk.border}`}
                 >
                   {result.riskLevel.replaceAll("_", " ")}
                 </span>
 
                 {result.analysisSource && (
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+                  <span className="rounded-full bg-[#FFF9F5] dark:bg-[#0B0E14] border border-[#DEC4CB] dark:border-[#253146] px-3 py-1 text-xs font-medium text-[#6B7280] dark:text-[#94A3B8]">
                     Source: {result.analysisSource.replaceAll("_", " ")}
                   </span>
                 )}
@@ -337,20 +337,20 @@ export default function ScamSaathi() {
             </div>
           </div>
 
-          <div className="mt-6 border-t border-slate-100 pt-5">
-            <h4 className="font-semibold text-slate-900">
+          <div className="mt-6 border-t border-[#E8D7DC] dark:border-[#253146] pt-5">
+            <h4 className="font-serif-editorial text-lg font-bold text-[#111318] dark:text-[#F1F5F9]">
               Warning signs found
             </h4>
 
             {result.indicators.length > 0 ? (
-              <ul className="mt-3 space-y-3">
+              <ul className="mt-3 space-y-2.5">
                 {result.indicators.map((indicator, index) => (
                   <li
                     key={`${indicator}-${index}`}
-                    className="flex items-start gap-2 text-sm leading-6 text-slate-600"
+                    className="flex items-start gap-2 text-sm leading-relaxed text-[#4B5563] dark:text-[#CBD5E1]"
                   >
                     <AlertTriangle
-                      className="mt-1 shrink-0 text-amber-600"
+                      className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400"
                       size={16}
                     />
                     {indicator}
@@ -358,7 +358,7 @@ export default function ScamSaathi() {
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-sm text-slate-500">
+              <p className="mt-2 text-xs text-[#6B7280] dark:text-[#94A3B8]">
                 No warning indicators were returned by the analysis.
                 This does not guarantee that the content is safe.
               </p>
@@ -367,8 +367,8 @@ export default function ScamSaathi() {
 
           {Array.isArray(result.detectedCategories) &&
             result.detectedCategories.length > 0 && (
-              <div className="mt-5 border-t border-slate-100 pt-5">
-                <h4 className="font-semibold text-slate-900">
+              <div className="mt-5 border-t border-[#E8D7DC] dark:border-[#253146] pt-5">
+                <h4 className="font-serif-editorial text-lg font-bold text-[#111318] dark:text-[#F1F5F9]">
                   Detected categories
                 </h4>
 
@@ -376,7 +376,7 @@ export default function ScamSaathi() {
                   {result.detectedCategories.map((category, index) => (
                     <span
                       key={`${category}-${index}`}
-                      className="rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700"
+                      className="rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-[#FFF9F5] dark:bg-[#0B0E14] px-3 py-1 text-xs font-medium text-[#4B5563] dark:text-[#CBD5E1]"
                     >
                       {category}
                     </span>
@@ -387,12 +387,12 @@ export default function ScamSaathi() {
 
           {Array.isArray(result.recommendedActions) &&
             result.recommendedActions.length > 0 && (
-              <div className="mt-5 rounded-xl bg-emerald-50 p-4">
-                <h4 className="font-semibold text-emerald-900">
+              <div className="mt-5 rounded-2xl bg-[#0D9488]/10 dark:bg-[#2DD4BF]/15 border border-[#0D9488]/20 p-4">
+                <h4 className="font-bold text-sm text-[#0D9488] dark:text-[#2DD4BF]">
                   Recommended actions
                 </h4>
 
-                <ul className="mt-2 list-inside list-disc space-y-1 text-sm leading-6 text-emerald-900">
+                <ul className="mt-2 list-inside list-disc space-y-1 text-xs font-medium leading-relaxed text-[#0F766E] dark:text-[#5EEAD4]">
                   {result.recommendedActions.map((action, index) => (
                     <li key={`${action}-${index}`}>{action}</li>
                   ))}
@@ -401,20 +401,20 @@ export default function ScamSaathi() {
             )}
 
           {result.disclaimer && (
-            <p className="mt-5 text-xs leading-5 text-slate-500">
+            <p className="mt-5 text-[11px] leading-4 text-[#6B7280] dark:text-[#64748B]">
               {result.disclaimer}
             </p>
           )}
         </section>
       )}
 
-      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-300 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 p-4">
         <Info
-          className="mt-0.5 shrink-0 text-amber-700"
-          size={19}
+          className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-400"
+          size={18}
         />
 
-        <p className="text-sm leading-6 text-amber-900">
+        <p className="text-xs font-medium leading-relaxed text-amber-900 dark:text-amber-200">
           Scam analysis is a risk assessment, not proof of fraud.
           Even content with a low risk score may be malicious.
           Never share OTPs, passwords, or banking PINs, and verify
