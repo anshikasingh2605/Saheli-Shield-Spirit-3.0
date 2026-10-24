@@ -64,7 +64,7 @@ export default function Dashboard({ setPage, user }) {
               <button
                 type="button"
                 onClick={() => setPage("route")}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185] hover:bg-[#7E0E32] hover:text-white transition shadow-2xs cursor-pointer"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185] hover:bg-[#7E0E32] hover:text-white dark:hover:bg-[#FB7185] dark:hover:text-[#0B0E14] transition shadow-2xs cursor-pointer"
                 aria-label="Open SaheliRoute"
               >
                 <ArrowRight size={17} />
