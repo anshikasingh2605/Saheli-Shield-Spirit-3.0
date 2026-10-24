@@ -337,6 +337,7 @@ export default function Auth({ onLogin, onBack }) {
                     placeholder="Your full name"
                     maxLength={80}
                     required
+                    aria-required="true"
                     disabled={loading}
                     className="w-full py-3 outline-none text-sm text-[#111318] dark:text-[#F1F5F9] bg-transparent"
                   />
