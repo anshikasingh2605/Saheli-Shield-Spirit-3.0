@@ -172,13 +172,11 @@ export default function TrustedContacts() {
       return;
     }
 
-    const payload = {
-      name,
-      phone,
-      email,
-      relationship,
-      consentGiven: true,
-    };
+    // Backend PATCH /contacts/:id does not support updating email —
+    // email is set once on creation and cannot be changed.
+    const payload = editingId
+      ? { name, phone, relationship, consentGiven: true }
+      : { name, phone, email, relationship, consentGiven: true };
 
     setSaving(true);
 
@@ -408,6 +406,9 @@ export default function TrustedContacts() {
                   className="mb-1.5 block text-sm font-medium text-slate-700"
                 >
                   Email address
+                  {editingId && (
+                    <span className="ml-2 text-xs font-normal text-amber-600">(cannot be changed)</span>
+                  )}
                 </label>
 
                 <input
@@ -418,13 +419,16 @@ export default function TrustedContacts() {
                   onChange={updateField}
                   autoComplete="email"
                   maxLength={254}
-                  required
+                  required={!editingId}
+                  disabled={Boolean(editingId)}
                   placeholder="trustedperson@example.com"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                 />
 
                 <p className="mt-1 text-xs text-slate-500">
-                  SOS alerts will be sent to this email address.
+                  {editingId
+                    ? "Email is fixed after the contact is created and is used for SOS alerts."
+                    : "SOS alerts will be sent to this email address."}
                 </p>
               </div>
 

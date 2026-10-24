@@ -496,7 +496,7 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
       const sent = dispatches.filter((item) => item?.delivery?.sent === true).length;
       const failed = dispatches.filter((item) => item?.delivery?.sent !== true).length;
       const details = dispatches.map((item) => {
-        const recipient = item?.email || item?.recipient || item?.name || "Trusted contact";
+        const recipient = item?.email || item?.phone || item?.name || "Trusted contact";
         const delivery = item?.delivery || {};
         if (delivery.sent === true) {
           return `${recipient}: accepted by email provider; inbox delivery is not guaranteed.`;

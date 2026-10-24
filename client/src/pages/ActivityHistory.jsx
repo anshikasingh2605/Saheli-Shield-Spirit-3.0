@@ -178,6 +178,7 @@ export default function ActivityHistory() {
         type: "scam",
         title: "Scam message analysis",
         detail:
+          scan.submittedSnippet ||
           scan.message ||
           scan.url ||
           scan.content ||
