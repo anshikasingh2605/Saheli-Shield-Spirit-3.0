@@ -61,29 +61,29 @@ function getStatusStyle(status, type) {
   if (type === "scam") {
     switch (status) {
       case "High risk":
-        return "bg-red-50 text-red-700";
+        return "bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50";
       case "Suspicious":
-        return "bg-amber-50 text-amber-700";
+        return "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50";
       case "Low risk":
-        return "bg-yellow-50 text-yellow-700";
+        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-900/50";
       case "Safe":
-        return "bg-emerald-50 text-emerald-700";
+        return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50";
       default:
-        return "bg-slate-100 text-slate-600";
+        return "bg-[#FFF9F5] dark:bg-[#1E293B] text-[#6B7280] dark:text-[#94A3B8] border border-[#DEC4CB] dark:border-[#253146]";
     }
   }
 
   switch (String(status).toLowerCase()) {
     case "active":
-      return "bg-blue-50 text-blue-700";
+      return "bg-[#0D9488]/10 text-[#0D9488] dark:bg-[#2DD4BF]/15 dark:text-[#2DD4BF] border border-[#0D9488]/20";
     case "completed":
-      return "bg-emerald-50 text-emerald-700";
+      return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50";
     case "cancelled":
-      return "bg-slate-100 text-slate-600";
+      return "bg-[#FFF9F5] dark:bg-[#1E293B] text-[#6B7280] dark:text-[#94A3B8] border border-[#DEC4CB] dark:border-[#253146]";
     case "overdue":
-      return "bg-red-50 text-red-700";
+      return "bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50";
     default:
-      return "bg-amber-50 text-amber-700";
+      return "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50";
   }
 }
 
@@ -232,34 +232,34 @@ export default function ActivityHistory() {
   }, [scans, journeys, filter]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 font-sans-ui">
       <section>
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-violet-100 p-3 text-violet-700">
-            <History size={27} />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185] shadow-2xs shrink-0">
+            <History size={25} />
           </div>
           <div>
-            <p className="text-sm font-medium text-violet-700">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#7E0E32] dark:text-[#FB7185]">
               YOUR RECENT ACTIVITY
             </p>
-            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+            <h1 className="font-serif-editorial text-3xl font-bold text-[#111318] dark:text-[#F8FAFC] sm:text-4xl">
               Activity History
-            </h2>
+            </h1>
           </div>
         </div>
 
-        <p className="mt-4 text-slate-500">
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#6B7280] dark:text-[#94A3B8]">
           Review your journey records and saved scam checks in one place.
         </p>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-3xl border border-[#E8D7DC] dark:border-[#253146] bg-white dark:bg-[#161D2B] p-5 shadow-sm sm:p-7">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <h3 className="font-semibold text-slate-900">
+            <h2 className="font-bold text-[#111318] dark:text-[#F8FAFC]">
               Activity records
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
+            </h2>
+            <p className="mt-0.5 text-xs text-[#6B7280] dark:text-[#94A3B8]">
               {loading
                 ? "Loading records..."
                 : `${activities.length} ${
@@ -269,18 +269,18 @@ export default function ActivityHistory() {
                   }`}
             </p>
             {!loading && (
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-[11px] text-[#6B7280] dark:text-[#94A3B8]">
                 {journeys.length} journeys · {scans.length} scam checks
               </p>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Filter size={17} className="text-slate-500" />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Filter size={16} className="text-[#6B7280] dark:text-[#94A3B8]" />
             <select
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-violet-500"
+              className="rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-3 py-2 text-xs font-semibold text-[#111318] dark:text-[#F8FAFC] outline-none focus:border-[#7E0E32] dark:focus:border-[#FB7185] transition"
               aria-label="Filter activity"
             >
               <option value="all">All activity</option>
@@ -292,10 +292,10 @@ export default function ActivityHistory() {
               type="button"
               onClick={fetchHistory}
               disabled={loading}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-3.5 py-2 text-xs font-semibold text-[#111318] dark:text-[#F8FAFC] hover:bg-[#FFF4EC] dark:hover:bg-[#253146] disabled:opacity-50 transition"
             >
               <RefreshCw
-                size={15}
+                size={14}
                 className={loading ? "animate-spin" : ""}
               />
               Refresh
@@ -304,22 +304,22 @@ export default function ActivityHistory() {
         </div>
 
         {partialErrors.length > 0 && (
-          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="mt-5 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-4">
             <div className="flex items-start gap-2">
-              <AlertCircle size={19} className="mt-0.5 shrink-0 text-amber-700" />
+              <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-400" />
               <div>
-                <p className="font-medium text-amber-900">
+                <p className="font-semibold text-xs text-amber-900 dark:text-amber-300">
                   Some history could not be loaded
                 </p>
                 {partialErrors.map((message) => (
                   <p
                     key={message}
-                    className="mt-1 break-words text-sm text-amber-800"
+                    className="mt-1 break-words text-xs text-amber-800 dark:text-amber-400"
                   >
                     {message}
                   </p>
                 ))}
-                <p className="mt-2 text-sm text-amber-800">
+                <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-500">
                   Check that the journey-history endpoint exists on your deployed backend.
                 </p>
               </div>
@@ -328,16 +328,16 @@ export default function ActivityHistory() {
         )}
 
         {error && (
-          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="mt-5 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-4 text-xs font-medium text-red-800 dark:text-red-300">
             {error}
           </div>
         )}
 
         <div className="mt-6 space-y-3">
           {loading && (
-            <div className="py-10 text-center text-slate-500">
-              <RefreshCw className="mx-auto animate-spin" size={26} />
-              <p className="mt-3 text-sm">Fetching your activity history...</p>
+            <div className="py-10 text-center text-[#6B7280] dark:text-[#94A3B8]">
+              <RefreshCw className="mx-auto animate-spin text-[#7E0E32] dark:text-[#FB7185]" size={24} />
+              <p className="mt-3 text-xs">Fetching your activity history...</p>
             </div>
           )}
 
@@ -355,42 +355,42 @@ export default function ActivityHistory() {
               return (
                 <article
                   key={item.id}
-                  className="flex items-start gap-4 rounded-xl border border-slate-200 p-4"
+                  className="flex items-start gap-3.5 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-[#FFFDFB] dark:bg-[#1A2233] p-4 transition hover:border-[#7E0E32]/30"
                 >
-                  <div className="rounded-xl bg-violet-50 p-3 text-violet-700">
-                    <Icon size={21} />
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185]">
+                    <Icon size={20} />
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-semibold text-slate-900">
+                      <h3 className="font-bold text-sm text-[#111318] dark:text-[#F8FAFC]">
                         {item.title}
-                      </h4>
+                      </h3>
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusStyle(
+                        className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${getStatusStyle(
                           item.status,
                           item.type
                         )}`}
                       >
                         {item.status}
                       </span>
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
+                      <span className="rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#1E293B] px-2.5 py-0.5 text-[11px] font-semibold text-[#6B7280] dark:text-[#94A3B8]">
                         {isJourney ? "Journey" : "Scam check"}
                       </span>
                     </div>
 
-                    <p className="mt-2 break-words text-sm leading-6 text-slate-600">
+                    <p className="mt-2 break-words text-xs leading-relaxed text-[#4B5563] dark:text-[#CBD5E1]">
                       {item.detail}
                     </p>
 
                     {item.explanation && (
-                      <p className="mt-2 break-words text-sm leading-6 text-slate-500">
+                      <p className="mt-1.5 break-words text-xs leading-relaxed text-[#6B7280] dark:text-[#94A3B8]">
                         {item.explanation}
                       </p>
                     )}
 
-                    <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
-                      <Clock size={13} />
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] text-[#6B7280] dark:text-[#94A3B8]">
+                      <Clock size={12} />
                       {item.time}
                     </p>
                   </div>
@@ -399,12 +399,12 @@ export default function ActivityHistory() {
             })}
 
           {!loading && activities.length === 0 && (
-            <div className="py-10 text-center">
-              <Search className="mx-auto text-slate-400" size={28} />
-              <p className="mt-3 font-medium text-slate-700">
+            <div className="rounded-2xl border border-dashed border-[#DEC4CB] dark:border-[#253146] bg-[#FFF9F5]/50 dark:bg-[#111622]/50 py-12 text-center">
+              <Search className="mx-auto text-[#6B7280] dark:text-[#94A3B8]" size={26} />
+              <p className="mt-3.5 font-bold text-sm text-[#111318] dark:text-[#F8FAFC]">
                 No records in this category
               </p>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-xs text-[#6B7280] dark:text-[#94A3B8]">
                 {filter === "journey"
                   ? "Your saved journeys will appear here once the history API is available."
                   : filter === "scam"
