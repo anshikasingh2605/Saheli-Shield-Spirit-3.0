@@ -39,17 +39,6 @@ const geocodePlace = async (place) => {
   };
 };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-export default function SaheliRoute({ initialStart = "", initialDestination = "" }) {
-  const [start, setStart] = useState(initialStart || "");
-  const [destination, setDestination] = useState(initialDestination || "");
-=======
-=======
-export default function SaheliRoute({ initialStart = "", initialDestination = "" }) {
-  const [start, setStart] = useState(initialStart || "");
-  const [destination, setDestination] = useState(initialDestination || "");
->>>>>>> 9fa32f9df54033d95e5523fc863a3352586f4c39
 const getFeedbackStorageKey = () => {
   try {
     const user = JSON.parse(localStorage.getItem("sahelishield_user") || "null");
@@ -60,13 +49,9 @@ const getFeedbackStorageKey = () => {
   }
 };
 
-export default function SaheliRoute() {
-  const [start, setStart] = useState("");
-  const [destination, setDestination] = useState("");
-<<<<<<< HEAD
->>>>>>> origin/main
-=======
->>>>>>> 9fa32f9df54033d95e5523fc863a3352586f4c39
+export default function SaheliRoute({ initialStart = "", initialDestination = "" }) {
+  const [start, setStart] = useState(initialStart || "");
+  const [destination, setDestination] = useState(initialDestination || "");
   const [routes, setRoutes] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [originPoint, setOriginPoint] = useState(null);
@@ -336,9 +321,20 @@ export default function SaheliRoute() {
         destination.trim()
       );
 
+      // Detect user's local time of day so backend applies time-sensitive safety scoring
+      const getTimeOfDay = () => {
+        const h = new Date().getHours();
+        if (h >= 23 || h < 5) return "late_night";
+        if (h >= 19) return "night";
+        if (h >= 16) return "evening";
+        if (h >= 12) return "afternoon";
+        return "morning";
+      };
+
       const response = await api.post("/routes/calculate", {
         origin,
         destination: destinationLocation,
+        timeOfDay: getTimeOfDay(),
       });
 
       const result = response.data?.data;
@@ -424,20 +420,21 @@ export default function SaheliRoute() {
       setActiveJourney(journey);
       setJourneyStatus("active");
 
-      let locationSaved = false;
       try {
         await api.patch(`/journeys/${journey._id}/location`, initialLocation);
-        locationSaved = true;
-        lastLocationSentRef.current = Date.now();
       } catch (locationError) {
-        setError(`Journey was created, but the initial GPS position could not be saved: ${getError(locationError)}`);
+        // Fail closed: do not leave an active journey that has no confirmed initial GPS save.
+        try { await api.post(`/journeys/${journey._id}/complete`); } catch { /* keep the original location error */ }
+        setActiveJourney(null);
+        setJourneyStatus("idle");
+        setCurrentLocation(null);
+        throw new Error(`Your location permission was granted, but the backend could not save your initial GPS position. The journey was not started. ${getError(locationError)}`);
       }
 
+      lastLocationSentRef.current = Date.now();
       // Start continuous tracking immediately, using the newly created journey ID.
       startLocationTracking(journey._id);
-      setNotice(locationSaved
-        ? "Journey started. Your current GPS position was saved and live location tracking is enabled."
-        : "Journey started with GPS permission enabled. The first location save failed; live tracking will retry on the next GPS update.");
+      setNotice("Journey started. Your current GPS position was saved and live location tracking is enabled.");
     } catch (err) {
       const geoMessages = {
         1: "Location permission is required. Allow location access in your browser settings, then press Start journey again.",
@@ -491,56 +488,40 @@ export default function SaheliRoute() {
 
   const handleSOS = async () => {
     if (!activeJourney?._id) {
-      setError(
-        "There is no active journey. Start a journey before triggering SOS."
-      );
+      setError("There is no active journey. Start a journey before triggering SOS.");
       return;
     }
 
     const confirmed = window.confirm(
-      "Send an emergency SOS request for your active journey? Continue only if you need emergency assistance."
+      "Send an emergency SOS email to your consented trusted contacts? Continue only if you need emergency assistance."
     );
-
     if (!confirmed) return;
 
     setJourneyLoading(true);
     setError("");
     setNotice("");
-
     try {
-      const response = await api.post(
-        `/journeys/${activeJourney._id}/sos`
-      );
-
+      const response = await api.post(`/journeys/${activeJourney._id}/sos`);
       const result = response.data?.data;
-      const dispatches = Array.isArray(result?.dispatchDetails)
-        ? result.dispatchDetails
-        : [];
-      const isSimulated = (item) =>
-        item?.delivery?.provider === "simulated_sms" ||
-        item?.delivery?.simulated === true;
-      const realAccepted = (item) =>
-        item?.delivery?.sent === true && !isSimulated(item);
-      const sent = dispatches.filter(realAccepted).length;
-      const simulated = dispatches.filter(isSimulated).length;
-      const failed = dispatches.filter(
-        (item) => !isSimulated(item) && item?.delivery?.sent !== true
-      ).length;
+      const dispatches = Array.isArray(result?.dispatchDetails) ? result.dispatchDetails : [];
+      const sent = dispatches.filter((item) => item?.delivery?.sent === true).length;
+      const failed = dispatches.filter((item) => item?.delivery?.sent !== true).length;
       const details = dispatches.map((item) => {
-        const provider = item?.delivery?.provider;
+        const recipient = item?.email || item?.phone || item?.name || "Trusted contact";
         const delivery = item?.delivery || {};
-        const recipient = item?.name || item?.phone || "Trusted contact";
-        const state = isSimulated(item)
-          ? "SIMULATED — no real SMS was sent"
-          : delivery.sent === true
-            ? `accepted by ${provider || "SMS provider"}; delivery not guaranteed`
-            : `FAILED / UNCONFIRMED${delivery.error ? `: ${delivery.error}` : ""}`;
-        return `${recipient}: ${state}`;
+        if (delivery.sent === true) {
+          return `${recipient}: accepted by email provider; inbox delivery is not guaranteed.`;
+        }
+        return `${recipient}: email failed${delivery.error ? ` (${delivery.error})` : "."}`;
       });
+
+      const summary = result?.notifiedContactsCount === 0 || dispatches.length === 0
+        ? "SOS request reached the server, but no email delivery results were returned. Check that you have saved trusted contacts with valid email addresses and consent."
+        : `SOS email processing finished: ${sent} accepted by the email provider, ${failed} failed. Provider acceptance does not guarantee inbox delivery.`;
+
       setNotice([
-        `SOS request processed. ${sent} SMS request(s) accepted by a real provider, ${simulated} simulated, ${failed} failed/unconfirmed. Provider acceptance does not confirm delivery.`,
-        result?.mapLink ? `Location link: ${result.mapLink}` : "",
-        dispatches.length === 0 ? "No per-contact delivery details were returned by the backend." : "",
+        summary,
+        result?.mapLink ? `Location link: ${result.mapLink}` : "No map link was returned by the server.",
         ...details,
       ].filter(Boolean).join("\n"));
     } catch (err) {
@@ -705,18 +686,24 @@ export default function SaheliRoute() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
+                        {/* Use backend title; fall back to type label */}
                         <p className="font-semibold text-slate-900">
-                          {routeOption.type === "faster"
-                            ? `Route ${index + 1} · Faster option`
-                            : routeOption.type === "balanced"
-                              ? `Route ${index + 1} · Alternative option`
-                              : `Route ${index + 1} · Route option`}
+                          {routeOption.title ||
+                            (routeOption.type === "safer"
+                              ? `Route ${index + 1} · Safer Route`
+                              : routeOption.type === "faster"
+                                ? `Route ${index + 1} · Faster Route`
+                                : routeOption.type === "balanced"
+                                  ? `Route ${index + 1} · Balanced Route`
+                                  : `Route ${index + 1} · Route`)}
                         </p>
 
+                        {/* Use backend description if available */}
                         <p className="mt-1 text-sm text-slate-500">
-                          {routeOption.polyline || (Array.isArray(routeOption.coordinates) && routeOption.coordinates.length > 1)
-                            ? "Road geometry provided by the routing service. This is not a verified safety rating."
-                            : "Estimated route details only. Road geometry and verified safety data are unavailable."}
+                          {routeOption.description ||
+                            (routeOption.polyline || (Array.isArray(routeOption.coordinates) && routeOption.coordinates.length > 1)
+                              ? "Road geometry provided by routing service."
+                              : "Estimated route — no live road geometry available.")}
                         </p>
                       </div>
 
@@ -728,6 +715,7 @@ export default function SaheliRoute() {
                       )}
                     </div>
 
+                    {/* Stats row: distance · duration · safety score */}
                     <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-600">
                       <span className="flex items-center gap-1">
                         <Route size={15} />
@@ -739,19 +727,37 @@ export default function SaheliRoute() {
                         {formatDuration(routeOption.durationMinutes)}
                       </span>
 
-                      {routeOption.safetyDataVerified === true &&
-                      routeOption.safetyScore !== null &&
-                      routeOption.safetyScore !== undefined &&
-                      Number.isFinite(Number(routeOption.safetyScore)) ? (
-                        <span className="font-medium text-emerald-700">
-                          Verified safety score: {routeOption.safetyScore}/10
+                      {/* Safety score from backend — no safetyDataVerified guard needed */}
+                      {Number.isFinite(Number(routeOption.safetyScore)) ? (
+                        <span
+                          className={`font-semibold ${
+                            Number(routeOption.safetyScore) >= 8.5
+                              ? "text-emerald-700"
+                              : Number(routeOption.safetyScore) >= 7
+                                ? "text-amber-600"
+                                : "text-red-600"
+                          }`}
+                        >
+                          🛡 Safety {routeOption.safetyScore}/10
                         </span>
                       ) : (
-                        <span className="font-medium text-amber-700">
-                          Safety score unavailable · no verified safety data
+                        <span className="text-slate-400">
+                          Safety score pending
                         </span>
                       )}
                     </div>
+
+                    {/* Safety highlights from backend */}
+                    {Array.isArray(routeOption.safetyHighlights) && routeOption.safetyHighlights.length > 0 && (
+                      <ul className="mt-2 space-y-0.5">
+                        {routeOption.safetyHighlights.map((highlight, hIdx) => (
+                          <li key={hIdx} className="flex items-start gap-1.5 text-xs text-slate-500">
+                            <span className="mt-0.5 shrink-0 text-emerald-500">✓</span>
+                            {highlight}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </button>
                 ))}
               </div>
@@ -883,7 +889,7 @@ export default function SaheliRoute() {
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
               >
                 <Phone size={19} />
-                SOS — Emergency help
+                Send SOS email
               </button>
 
               <p className="mt-2 flex items-start gap-2 text-xs leading-5 text-slate-500">
@@ -891,9 +897,7 @@ export default function SaheliRoute() {
                   className="mt-0.5 shrink-0 text-amber-600"
                   size={15}
                 />
-                SOS requests use the backend. Actual emergency
-                notifications depend on the server configuration and
-                successful delivery.
+                Sends an emergency email to your consented trusted contacts. Provider acceptance does not guarantee inbox delivery.
               </p>
             </div>
           </section>
