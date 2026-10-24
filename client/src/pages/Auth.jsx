@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ShieldCheck,
   Mail,
@@ -67,75 +67,24 @@ export default function Auth({ onLogin, onBack }) {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Google Authentication State
+  // Real Google OAuth Configuration
+  const GOOGLE_CLIENT_ID =
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    "587929881725-fv3g2rgp5mrih0bnvl8klg6shigjg4ub.apps.googleusercontent.com";
+
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleModalOpen, setGoogleModalOpen] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState("");
-  const [customGoogleName, setCustomGoogleName] = useState("");
-  const [showCustomAccountInput, setShowCustomAccountInput] = useState(false);
-  const [customError, setCustomError] = useState("");
-
-  const suggestedAccounts = [
-    {
-      id: "google_primary_anshika",
-      name: "Anshika Singh",
-      email: "anshika.singh@gmail.com",
-      avatarColor: "bg-[#7E0E32]",
-    },
-    {
-      id: "google_saheli_traveler",
-      name: "Saheli Traveler",
-      email: "traveler.safety@gmail.com",
-      avatarColor: "bg-[#0D9488]",
-    },
-  ];
-
-  // Initialize official Google Identity Services script if client ID is configured
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (clientId && typeof window !== "undefined" && !window.google?.accounts?.id) {
-      const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        try {
-          if (window.google?.accounts?.id) {
-            window.google.accounts.id.initialize({
-              client_id: clientId,
-              callback: (response) => {
-                if (response?.credential) {
-                  const payload = parseJwt(response.credential);
-                  if (payload) {
-                    completeGoogleLogin({
-                      id: payload.sub || "google_" + Date.now(),
-                      name: payload.name || payload.given_name || "Google User",
-                      email: payload.email,
-                      avatar: payload.picture,
-                    });
-                  }
-                }
-              },
-            });
-          }
-        } catch (e) {
-          console.warn("Google GIS init:", e);
-        }
-      };
-      document.body.appendChild(script);
-    }
-  }, []);
+  const tokenClientRef = useRef(null);
 
   function completeGoogleLogin(profile) {
     setGoogleLoading(true);
     setError("");
     setNotice("");
 
-    setTimeout(() => {
+    try {
       const googleUser = {
         id: profile.id || "google_" + Date.now(),
-        name: profile.name || "Google Traveler",
-        email: profile.email || "traveler@gmail.com",
+        name: profile.name || "Google User",
+        email: profile.email,
         phone: profile.phone || "",
         authProvider: "google",
         avatar: profile.avatar || null,
@@ -144,63 +93,183 @@ export default function Auth({ onLogin, onBack }) {
 
       const googleToken =
         "google_oauth_" +
-        btoa(unescape(encodeURIComponent(JSON.stringify(googleUser))));
+        (profile.token || btoa(unescape(encodeURIComponent(JSON.stringify(googleUser)))));
 
       localStorage.setItem("sahelishield_token", googleToken);
       localStorage.setItem("sahelishield_user", JSON.stringify(googleUser));
 
       setGoogleLoading(false);
-      setGoogleModalOpen(false);
 
       if (typeof onLogin === "function") {
         onLogin(googleUser);
       }
-    }, 450);
+    } catch (err) {
+      console.error("Google session error:", err);
+      setError("Failed to process Google profile. Please try again.");
+      setGoogleLoading(false);
+    }
   }
+
+  function handleCredentialResponse(response) {
+    if (response?.credential) {
+      const payload = parseJwt(response.credential);
+      if (payload) {
+        completeGoogleLogin({
+          id: payload.sub,
+          name: payload.name || payload.given_name || "Google User",
+          email: payload.email,
+          avatar: payload.picture,
+          token: response.credential,
+        });
+      } else {
+        setError("Invalid Google token payload received.");
+        setGoogleLoading(false);
+      }
+    } else {
+      setError("No credential returned by Google Sign-In.");
+      setGoogleLoading(false);
+    }
+  }
+
+  // Load and initialize official Google Identity Services
+  useEffect(() => {
+    function initGoogleServices() {
+      if (!window.google?.accounts) return;
+
+      try {
+        // 1. Initialize Google ID (One Tap / Credential)
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        // 2. Render official Google button if container is present
+        const container = document.getElementById("google-signin-btn-container");
+        if (container) {
+          container.innerHTML = "";
+          window.google.accounts.id.renderButton(container, {
+            theme: "outline",
+            size: "large",
+            type: "standard",
+            shape: "pill",
+            text: isRegister ? "signup_with" : "signin_with",
+            width: 340,
+            logo_alignment: "left",
+          });
+        }
+
+        // 3. Initialize OAuth 2.0 Token Client for explicit user clicks
+        tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: "email profile openid",
+          callback: async (tokenResponse) => {
+            if (tokenResponse?.error) {
+              console.warn("Google token error:", tokenResponse.error);
+              if (tokenResponse.error === "popup_closed_by_user") {
+                setNotice("Google Sign-In popup was closed.");
+              } else {
+                setError(`Google Sign-In: ${tokenResponse.error}`);
+              }
+              setGoogleLoading(false);
+              return;
+            }
+
+            if (tokenResponse?.access_token) {
+              try {
+                // Fetch real user data directly from Google's UserInfo API
+                const res = await fetch(
+                  "https://www.googleapis.com/oauth2/v3/userinfo",
+                  {
+                    headers: {
+                      Authorization: `Bearer ${tokenResponse.access_token}`,
+                    },
+                  }
+                );
+
+                if (!res.ok) {
+                  throw new Error("Unable to fetch user info from Google.");
+                }
+
+                const profile = await res.json();
+                completeGoogleLogin({
+                  id: profile.sub,
+                  name: profile.name || profile.given_name || "Google User",
+                  email: profile.email,
+                  avatar: profile.picture,
+                  token: tokenResponse.access_token,
+                });
+              } catch (fetchErr) {
+                console.error("UserInfo fetch error:", fetchErr);
+                setError("Failed to retrieve Google profile data. Check internet connection.");
+                setGoogleLoading(false);
+              }
+            }
+          },
+          error_callback: (err) => {
+            console.warn("Google OAuth error_callback:", err);
+            if (err?.type === "popup_closed") {
+              setNotice("Google Sign-In popup was closed.");
+            } else {
+              setError("Google Sign-In failed. Please verify authorized origins in Google Cloud Console.");
+            }
+            setGoogleLoading(false);
+          },
+        });
+      } catch (err) {
+        console.warn("Google GIS initialization warning:", err);
+      }
+    }
+
+    if (window.google?.accounts) {
+      initGoogleServices();
+    } else {
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        initGoogleServices();
+      };
+      script.onerror = () => {
+        console.error("Failed to load Google Identity Services script.");
+      };
+      document.body.appendChild(script);
+    }
+  }, [mode, isRegister]);
 
   function handleGoogleSignIn() {
     if (loading || googleLoading) return;
     setError("");
     setNotice("");
+    setGoogleLoading(true);
 
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (clientId && window.google?.accounts?.id) {
+    if (tokenClientRef.current) {
+      try {
+        tokenClientRef.current.requestAccessToken({ prompt: "select_account" });
+      } catch (err) {
+        console.error("Token client error:", err);
+        setError("Failed to open Google account chooser. Please check popup blockers.");
+        setGoogleLoading(false);
+      }
+    } else if (window.google?.accounts?.id) {
       try {
         window.google.accounts.id.prompt((notification) => {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            setGoogleModalOpen(true);
+            setError("Google popup was blocked or skipped. Please click the official Google button above.");
+            setGoogleLoading(false);
           }
         });
-        return;
-      } catch (e) {
-        console.warn("Google prompt error, opening modal:", e);
+      } catch (err) {
+        console.error("Google prompt error:", err);
+        setError("Google initialization error: " + err.message);
+        setGoogleLoading(false);
       }
+    } else {
+      setError("Google Identity Services is loading. Please check your connection and try again.");
+      setGoogleLoading(false);
     }
-
-    setGoogleModalOpen(true);
-  }
-
-  function handleCustomGoogleSubmit(e) {
-    e.preventDefault();
-    setCustomError("");
-
-    const cleanEmail = customGoogleEmail.trim().toLowerCase();
-    const cleanName = customGoogleName.trim();
-
-    if (!cleanName || cleanName.length < 2) {
-      setCustomError("Please enter your full name.");
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setCustomError("Please enter a valid Google email address.");
-      return;
-    }
-
-    completeGoogleLogin({
-      name: cleanName,
-      email: cleanEmail,
-    });
   }
 
   const isRegister = mode === "register";
@@ -691,27 +760,34 @@ export default function Auth({ onLogin, onBack }) {
             </div>
           </div>
 
-          {/* Sign in with Google Button */}
-          <button
-            type="button"
-            id="google-signin-btn"
-            onClick={handleGoogleSignIn}
-            disabled={loading || googleLoading}
-            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-4 py-3.5 text-sm font-bold text-[#111318] dark:text-[#F1F5F9] shadow-xs hover:bg-[#FFF9F5] dark:hover:bg-[#1E293B] hover:border-[#7E0E32]/40 dark:hover:border-[#FB7185]/40 transition active:scale-[0.99] cursor-pointer"
-          >
-            {googleLoading ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#7E0E32] border-t-transparent" />
-            ) : (
-              <GoogleIcon className="h-5 w-5 shrink-0" />
-            )}
-            <span>
-              {googleLoading
-                ? "Connecting to Google..."
-                : isRegister
-                  ? "Sign up with Google"
-                  : "Sign in with Google"}
-            </span>
-          </button>
+          {/* Official Google Identity Services Container & Custom Trigger */}
+          <div className="flex flex-col items-center gap-3">
+            <div
+              id="google-signin-btn-container"
+              className="flex justify-center w-full min-h-[44px]"
+            />
+
+            <button
+              type="button"
+              id="google-signin-btn"
+              onClick={handleGoogleSignIn}
+              disabled={loading || googleLoading}
+              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-4 py-3.5 text-sm font-bold text-[#111318] dark:text-[#F1F5F9] shadow-xs hover:bg-[#FFF9F5] dark:hover:bg-[#1E293B] hover:border-[#7E0E32]/40 dark:hover:border-[#FB7185]/40 transition active:scale-[0.99] cursor-pointer"
+            >
+              {googleLoading ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#7E0E32] border-t-transparent" />
+              ) : (
+                <GoogleIcon className="h-5 w-5 shrink-0" />
+              )}
+              <span>
+                {googleLoading
+                  ? "Connecting to Google..."
+                  : isRegister
+                    ? "Sign up with Google"
+                    : "Sign in with Google"}
+              </span>
+            </button>
+          </div>
 
           <p className="mt-6 text-center text-xs leading-5 text-[#6B7280] dark:text-[#94A3B8]">
             By continuing, you agree to use SaheliShield
@@ -720,158 +796,6 @@ export default function Auth({ onLogin, onBack }) {
           </p>
         </div>
       </section>
-
-      {/* Google Account Selector Modal */}
-      {googleModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200"
-          onClick={() => !googleLoading && setGoogleModalOpen(false)}
-        >
-          <div
-            className="relative w-full max-w-sm rounded-3xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] p-6 shadow-2xl transition-all duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button
-              type="button"
-              disabled={googleLoading}
-              onClick={() => setGoogleModalOpen(false)}
-              className="absolute top-4 right-4 rounded-full p-1.5 text-[#6B7280] dark:text-[#94A3B8] hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer"
-              aria-label="Close"
-            >
-              <X size={18} />
-            </button>
-
-            {/* Modal Header */}
-            <div className="flex flex-col items-center text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white dark:bg-[#0B0E14] border border-[#E8D7DC] dark:border-[#253146] shadow-sm mb-3">
-                <GoogleIcon className="h-6 w-6" />
-              </div>
-
-              <h3 className="font-serif-editorial text-xl font-bold text-[#111318] dark:text-[#F8FAFC]">
-                Sign in with Google
-              </h3>
-              <p className="mt-1 text-xs text-[#6B7280] dark:text-[#94A3B8]">
-                Choose an account to continue to{" "}
-                <span className="font-bold text-[#7E0E32] dark:text-[#FB7185]">
-                  SaheliShield
-                </span>
-              </p>
-            </div>
-
-            {/* Account List */}
-            <div className="mt-5 space-y-2">
-              {suggestedAccounts.map((account) => (
-                <button
-                  key={account.id}
-                  type="button"
-                  disabled={googleLoading}
-                  onClick={() => completeGoogleLogin(account)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-[#E8D7DC] dark:border-[#253146] bg-[#FFF9F5]/70 dark:bg-[#0B0E14]/50 p-3 text-left transition hover:border-[#7E0E32] dark:hover:border-[#FB7185] hover:bg-white dark:hover:bg-[#1E293B] cursor-pointer group"
-                >
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-xs ${account.avatarColor}`}
-                  >
-                    {account.name.charAt(0)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-[#111318] dark:text-[#F1F5F9] truncate group-hover:text-[#7E0E32] dark:group-hover:text-[#FB7185]">
-                      {account.name}
-                    </p>
-                    <p className="text-[11px] text-[#6B7280] dark:text-[#94A3B8] truncate">
-                      {account.email}
-                    </p>
-                  </div>
-                  <ArrowRight
-                    size={14}
-                    className="text-[#6B7280] dark:text-[#94A3B8] transition group-hover:translate-x-0.5 group-hover:text-[#7E0E32] dark:group-hover:text-[#FB7185]"
-                  />
-                </button>
-              ))}
-
-              {/* Use custom account toggle */}
-              {!showCustomAccountInput ? (
-                <button
-                  type="button"
-                  disabled={googleLoading}
-                  onClick={() => setShowCustomAccountInput(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#DEC4CB] dark:border-[#253146] py-2.5 text-xs font-bold text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111318] dark:hover:text-[#F1F5F9] hover:border-[#7E0E32] dark:hover:border-[#FB7185] transition cursor-pointer"
-                >
-                  <UserRound size={14} />
-                  <span>Use another account</span>
-                </button>
-              ) : (
-                <form
-                  onSubmit={handleCustomGoogleSubmit}
-                  className="rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-[#FFF9F5] dark:bg-[#0B0E14] p-3 space-y-2 mt-2"
-                >
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#7E0E32] dark:text-[#FB7185]">
-                    Enter Google Account Details
-                  </p>
-                  <input
-                    type="text"
-                    value={customGoogleName}
-                    onChange={(e) => setCustomGoogleName(e.target.value)}
-                    placeholder="Your Full Name"
-                    required
-                    disabled={googleLoading}
-                    className="w-full rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3 py-2 text-xs outline-none text-[#111318] dark:text-[#F1F5F9] focus:border-[#7E0E32] dark:focus:border-[#FB7185]"
-                  />
-                  <input
-                    type="email"
-                    value={customGoogleEmail}
-                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    placeholder="name@gmail.com"
-                    required
-                    disabled={googleLoading}
-                    className="w-full rounded-xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3 py-2 text-xs outline-none text-[#111318] dark:text-[#F1F5F9] focus:border-[#7E0E32] dark:focus:border-[#FB7185]"
-                  />
-                  {customError && (
-                    <p className="text-[11px] font-bold text-red-600 dark:text-red-400">
-                      {customError}
-                    </p>
-                  )}
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="submit"
-                      disabled={googleLoading}
-                      className="flex-1 rounded-xl bg-[#7E0E32] hover:bg-[#5D0A24] dark:bg-[#9B123E] py-2 text-xs font-bold text-white transition cursor-pointer"
-                    >
-                      Continue
-                    </button>
-                    <button
-                      type="button"
-                      disabled={googleLoading}
-                      onClick={() => {
-                        setShowCustomAccountInput(false);
-                        setCustomError("");
-                      }}
-                      className="rounded-xl border border-[#DEC4CB] dark:border-[#253146] px-3 py-2 text-xs font-bold text-[#4B5563] dark:text-[#94A3B8] transition cursor-pointer"
-                    >
-                      Back
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            {/* Privacy notice */}
-            <p className="mt-4 text-[11px] text-center text-[#6B7280] dark:text-[#94A3B8] leading-tight">
-              To continue, Google shares your name, email, and profile picture with SaheliShield.
-            </p>
-
-            {/* Loading state indicator */}
-            {googleLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-white/90 dark:bg-[#161D2B]/90 backdrop-blur-xs">
-                <div className="h-8 w-8 animate-spin rounded-full border-3 border-[#7E0E32] border-t-transparent" />
-                <p className="mt-2 text-xs font-bold text-[#7E0E32] dark:text-[#FB7185]">
-                  Signing in with Google...
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
