@@ -60,6 +60,34 @@ export default function Landing({ onGetStarted }) {
   };
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
+
+  const navLinks = [
+    { id: "home", label: "Home" },
+    { id: "about", label: "About" },
+    { id: "features", label: "Features" },
+    { id: "community", label: "Community" },
+    { id: "impact", label: "Impact" },
+    { id: "faq", label: "FAQ" },
+  ];
+
+  useEffect(() => {
+    const sectionIds = ["home", "about", "features", "community", "impact", "faq"];
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 140;
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i]);
+        if (el && el.offsetTop <= scrollPosition) {
+          setActiveSection(sectionIds[i]);
+          break;
+        }
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const [demoTab, setDemoTab] = useState("route"); // "route" | "scam"
   const [activeFaq, setActiveFaq] = useState(0);
@@ -103,67 +131,54 @@ export default function Landing({ onGetStarted }) {
       {/* 1. TOP NAVIGATION BAR */}
       {/* ========================================================================= */}
       <header className="sticky top-0 z-40 w-full border-b border-[#E8D7DC] dark:border-[#1E293B] bg-[#FFF9F5]/95 dark:bg-[#0B0E14]/95 backdrop-blur-md transition-colors">
-        <div className="mx-auto flex h-16 sm:h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 sm:h-[72px] max-w-7xl items-center justify-between px-3.5 sm:px-6 lg:px-8">
           {/* Brand Logo with Exact SaheliShield Image */}
-          <a href="#" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
+          <a
+            href="#home"
+            onClick={() => setActiveSection("home")}
+            className="flex items-center gap-2 sm:gap-2.5 group shrink-0"
+          >
             <img
               src="/logo.png"
               alt="SaheliShield Official Shield Logo"
-              className="h-9.5 w-9.5 sm:h-10 sm:w-10 rounded-xl object-contain shadow-xs ring-1 ring-[#7E0E32]/10 dark:ring-white/10 shrink-0 transition-transform duration-300 group-hover:scale-105"
+              className="h-8.5 w-8.5 sm:h-10 sm:w-10 rounded-xl object-contain shadow-xs ring-1 ring-[#7E0E32]/10 dark:ring-white/10 shrink-0 transition-transform duration-300 group-hover:scale-105"
             />
-            <span className="font-serif-editorial text-2xl sm:text-[26px] font-bold tracking-tight text-[#7E0E32] dark:text-[#FB7185] leading-none select-none">
+            <span className="font-serif-editorial text-xl sm:text-2xl lg:text-[26px] font-bold tracking-tight text-[#7E0E32] dark:text-[#FB7185] leading-none select-none">
               Saheli<span className="text-[#111318] dark:text-[#F1F5F9]">Shield</span>
             </span>
           </a>
 
           {/* Center Navigation Links (Pill Container) */}
-          <nav className="hidden md:inline-flex items-center gap-1 rounded-full px-5 py-2 text-xs font-bold shadow-xs border border-[#E2CFD5] dark:border-[#253146] bg-white dark:bg-[#161D2B] text-[#2D3748] dark:text-[#94A3B8] transition-colors">
-            <a
-              href="#home"
-              className="relative px-3.5 py-1 text-[#7E0E32] dark:text-[#FB7185] font-extrabold"
-            >
-              Home
-              <span className="absolute bottom-0 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#7E0E32] dark:bg-[#FB7185]" />
-            </a>
-            <a
-              href="#about"
-              className="px-3.5 py-1 transition hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-            >
-              About
-            </a>
-            <a
-              href="#features"
-              className="px-3.5 py-1 transition hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-            >
-              Features
-            </a>
-            <a
-              href="#community"
-              className="px-3.5 py-1 transition hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-            >
-              Community
-            </a>
-            <a
-              href="#impact"
-              className="px-3.5 py-1 transition hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-            >
-              Impact
-            </a>
-            <a
-              href="#faq"
-              className="px-3.5 py-1 transition hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-            >
-              FAQ
-            </a>
+          <nav className="hidden lg:inline-flex items-center gap-1 rounded-full px-5 py-2 text-xs font-bold shadow-xs border border-[#E2CFD5] dark:border-[#253146] bg-white dark:bg-[#161D2B] text-[#2D3748] dark:text-[#94A3B8] transition-colors">
+            {navLinks.map((link) => {
+              const isActive = activeSection === link.id;
+              return (
+                <a
+                  key={link.id}
+                  href={`#${link.id}`}
+                  onClick={() => setActiveSection(link.id)}
+                  className={`relative px-3.5 py-1 transition hover:text-[#7E0E32] dark:hover:text-[#FB7185] ${
+                    isActive
+                      ? "text-[#7E0E32] dark:text-[#FB7185] font-extrabold"
+                      : ""
+                  }`}
+                >
+                  {link.label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#7E0E32] dark:bg-[#FB7185]" />
+                  )}
+                </a>
+              );
+            })}
           </nav>
 
           {/* Right Action Items */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Interactive Theme Toggle Button with Clear Visual Indicator */}
             <button
               type="button"
               onClick={toggleDarkMode}
-              className="flex items-center gap-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/90 dark:bg-[#161D2B] px-3 py-1.5 text-xs font-bold shadow-2xs transition hover:border-[#7E0E32] dark:hover:border-[#FB7185] cursor-pointer"
+              className="flex items-center gap-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/90 dark:bg-[#161D2B] p-1.5 sm:px-3 sm:py-1.5 text-xs font-bold shadow-2xs transition hover:border-[#7E0E32] dark:hover:border-[#FB7185] cursor-pointer"
               title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
               aria-label="Toggle Theme"
             >
@@ -180,7 +195,7 @@ export default function Landing({ onGetStarted }) {
                   <Sun size={13} className="fill-current text-amber-500" />
                 )}
               </div>
-              <span className="font-extrabold text-[#2D3748] dark:text-[#F1F5F9] text-xs">
+              <span className="hidden sm:inline font-extrabold text-[#2D3748] dark:text-[#F1F5F9] text-xs">
                 {darkMode ? "Dark" : "Light"}
               </span>
             </button>
@@ -189,7 +204,7 @@ export default function Landing({ onGetStarted }) {
             <button
               type="button"
               onClick={onGetStarted}
-              className="inline-flex items-center gap-2 rounded-full bg-[#7E0E32] hover:bg-[#5D0A24] dark:bg-[#9B123E] dark:hover:bg-[#7E0E32] px-5 sm:px-6 py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-[#7E0E32]/20 transition active:scale-95"
+              className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[#7E0E32] hover:bg-[#5D0A24] dark:bg-[#9B123E] dark:hover:bg-[#7E0E32] px-4 sm:px-6 py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-[#7E0E32]/20 transition active:scale-95 cursor-pointer"
             >
               <span>Get Started</span>
               <ArrowRight size={14} className="text-white" />
@@ -199,7 +214,7 @@ export default function Landing({ onGetStarted }) {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="rounded-xl border border-[#DEC4CB] dark:border-[#253146] p-2 text-[#111318] dark:text-[#F1F5F9] md:hidden hover:bg-white dark:hover:bg-[#1E293B]"
+              className="rounded-xl border border-[#DEC4CB] dark:border-[#253146] p-2 text-[#111318] dark:text-[#F1F5F9] lg:hidden hover:bg-white dark:hover:bg-[#1E293B] cursor-pointer shrink-0"
               aria-label="Toggle mobile menu"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -209,60 +224,41 @@ export default function Landing({ onGetStarted }) {
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="border-b border-[#E8D7DC] dark:border-[#1E293B] bg-white dark:bg-[#161D2B] px-6 py-5 md:hidden shadow-lg transition-colors">
-            <div className="flex flex-col space-y-3 text-sm font-bold text-[#2D3748] dark:text-[#CBD5E1]">
-              <a
-                href="#home"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-1 text-[#7E0E32] dark:text-[#FB7185]"
-              >
-                Home
-              </a>
-              <a
-                href="#about"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-1 hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-              >
-                About
-              </a>
-              <a
-                href="#features"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-1 hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-              >
-                Features
-              </a>
-              <a
-                href="#community"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-1 hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-              >
-                Community
-              </a>
-              <a
-                href="#impact"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-1 hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-              >
-                Impact
-              </a>
-              <a
-                href="#faq"
-                onClick={() => setMobileMenuOpen(false)}
-                className="py-1 hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
-              >
-                FAQ
-              </a>
+          <div className="border-b border-[#E8D7DC] dark:border-[#1E293B] bg-white/98 dark:bg-[#161D2B]/98 backdrop-blur-md px-5 sm:px-6 py-4 lg:hidden shadow-xl transition-all">
+            <div className="flex flex-col space-y-1 text-sm font-bold text-[#2D3748] dark:text-[#CBD5E1]">
+              {navLinks.map((link) => {
+                const isActive = activeSection === link.id;
+                return (
+                  <a
+                    key={link.id}
+                    href={`#${link.id}`}
+                    onClick={() => {
+                      setActiveSection(link.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
+                      isActive
+                        ? "bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185] font-extrabold"
+                        : "hover:bg-[#FFF9F5] dark:hover:bg-[#1E293B] hover:text-[#7E0E32] dark:hover:text-[#FB7185]"
+                    }`}
+                  >
+                    <span>{link.label}</span>
+                    {isActive && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#7E0E32] dark:bg-[#FB7185]" />
+                    )}
+                  </a>
+                );
+              })}
 
               {/* Mobile Appearance Toggle Row */}
-              <div className="flex items-center justify-between border-t border-[#E8D7DC] dark:border-[#253146] pt-3 mt-1">
+              <div className="flex items-center justify-between border-t border-[#E8D7DC] dark:border-[#253146] pt-3 mt-2 px-1">
                 <span className="text-xs font-bold text-[#4B5563] dark:text-[#94A3B8]">
                   Appearance
                 </span>
                 <button
                   type="button"
                   onClick={toggleDarkMode}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-slate-100 dark:bg-[#0B0E14] px-3.5 py-1.5 text-xs font-bold text-[#111318] dark:text-[#F1F5F9]"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-slate-100 dark:bg-[#0B0E14] px-3.5 py-1.5 text-xs font-bold text-[#111318] dark:text-[#F1F5F9] cursor-pointer"
                 >
                   {darkMode ? (
                     <>
@@ -278,15 +274,17 @@ export default function Landing({ onGetStarted }) {
                 </button>
               </div>
 
+              {/* Mobile Get Started CTA */}
               <button
                 type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onGetStarted();
                 }}
-                className="mt-2 w-full rounded-full bg-[#7E0E32] py-3 text-center font-bold text-white shadow-md hover:bg-[#5D0A24] dark:bg-[#9B123E]"
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[#7E0E32] hover:bg-[#5D0A24] dark:bg-[#9B123E] dark:hover:bg-[#7E0E32] py-3 text-center text-sm font-bold text-white shadow-md shadow-[#7E0E32]/25 transition active:scale-98 cursor-pointer"
               >
-                Get Started
+                <span>Get Started</span>
+                <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -296,7 +294,7 @@ export default function Landing({ onGetStarted }) {
       {/* ========================================================================= */}
       {/* 2. HERO SECTION — HIGH CONTRAST EDITORIAL COMPOSITION */}
       {/* ========================================================================= */}
-      <section id="home" className="relative overflow-hidden pt-10 pb-16 lg:pt-14 lg:pb-24">
+      <section id="home" className="relative overflow-hidden pt-10 pb-16 lg:pt-14 lg:pb-24 scroll-mt-20">
         {/* Soft atmospheric gradient */}
         <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[#FCE7E8]/70 dark:from-[#7E0E32]/30 via-[#F36F82]/10 dark:via-[#9B123E]/10 to-transparent blur-3xl" />
 
@@ -338,7 +336,7 @@ export default function Landing({ onGetStarted }) {
               <button
                 type="button"
                 onClick={() => setDemoModalOpen(true)}
-                className="inline-flex items-center gap-2.5 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-7 py-3.5 text-sm sm:text-base font-bold text-[#181A20] dark:text-[#F1F5F9] shadow-xs hover:border-[#7E0E32]/50 hover:bg-[#FFF9F5] dark:hover:bg-[#1E293B] transition"
+                className="inline-flex items-center gap-2.5 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-7 py-3.5 text-sm sm:text-base font-bold text-[#181A20] dark:text-[#F1F5F9] shadow-xs hover:border-[#7E0E32]/50 hover:bg-[#FFF9F5] dark:hover:bg-[#1E293B] transition cursor-pointer"
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FCE7E8] dark:bg-rose-950/80 text-[#7E0E32] dark:text-[#FB7185]">
                   <Play size={13} className="fill-current ml-0.5" />
@@ -421,7 +419,7 @@ export default function Landing({ onGetStarted }) {
       {/* ========================================================================= */}
       {/* 4. REAL PROBLEMS. REAL SOLUTIONS. SECTION */}
       {/* ========================================================================= */}
-      <section id="about" className="py-16 sm:py-24 border-t border-[#E8D7DC] dark:border-[#1E293B] transition-colors">
+      <section id="about" className="py-16 sm:py-24 border-t border-[#E8D7DC] dark:border-[#1E293B] transition-colors scroll-mt-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             {/* Left: Clean Thoughtful Woman Visual (No obstructing span elements) */}
@@ -662,7 +660,7 @@ export default function Landing({ onGetStarted }) {
       {/* ========================================================================= */}
       {/* 3. FEATURES GRID: COMPREHENSIVE DUAL-WORLD CAPABILITIES */}
       {/* ========================================================================= */}
-      <section id="features" className="py-20 border-t border-[#E8D7DC] dark:border-[#1E293B] transition-colors">
+      <section id="features" className="py-20 border-t border-[#E8D7DC] dark:border-[#1E293B] transition-colors scroll-mt-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto">
             <p className="text-xs sm:text-sm font-extrabold tracking-widest uppercase text-[#7E0E32] dark:text-[#FB7185]">
@@ -722,7 +720,7 @@ export default function Landing({ onGetStarted }) {
       {/* ========================================================================= */}
       {/* 4. COMMUNITY SENTINEL SECTION */}
       {/* ========================================================================= */}
-      <section id="community" className="py-20 bg-[#FFF7F8] dark:bg-[#0E121A] border-t border-[#E8D7DC] dark:border-[#1E293B] transition-colors">
+      <section id="community" className="py-20 bg-[#FFF7F8] dark:bg-[#0E121A] border-t border-[#E8D7DC] dark:border-[#1E293B] transition-colors scroll-mt-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <div className="inline-flex items-center gap-2 rounded-full bg-[#7E0E32]/10 dark:bg-rose-500/20 px-3.5 py-1 text-xs font-bold text-[#7E0E32] dark:text-[#FB7185] mb-3">
@@ -784,7 +782,7 @@ export default function Landing({ onGetStarted }) {
       {/* ========================================================================= */}
       {/* 5. IMPACT SECTION (SLEEK HORIZONTAL PROTOTYPE BAR) */}
       {/* ========================================================================= */}
-      <section id="impact" className="py-5 sm:py-6 bg-white dark:bg-[#0E121A] border-y border-[#E8D7DC] dark:border-[#1E293B] transition-colors">
+      <section id="impact" className="py-5 sm:py-6 bg-white dark:bg-[#0E121A] border-y border-[#E8D7DC] dark:border-[#1E293B] transition-colors scroll-mt-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4 sm:gap-6">
             {/* Prototype Indicator */}
@@ -849,7 +847,7 @@ export default function Landing({ onGetStarted }) {
       {/* ========================================================================= */}
       {/* 6. FAQ ACCORDION SECTION */}
       {/* ========================================================================= */}
-      <section id="faq" className="py-20 border-t border-[#E8D7DC] dark:border-[#1E293B] transition-colors">
+      <section id="faq" className="py-20 border-t border-[#E8D7DC] dark:border-[#1E293B] transition-colors scroll-mt-20">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-xl mx-auto mb-12">
             <p className="text-xs sm:text-sm font-extrabold tracking-widest uppercase text-[#7E0E32] dark:text-[#FB7185]">
@@ -873,6 +871,7 @@ export default function Landing({ onGetStarted }) {
                     onClick={() => setActiveFaq(isOpen ? null : index)}
                     className="flex w-full items-center justify-between p-5 text-left text-base font-extrabold text-[#111318] dark:text-[#F8FAFC] focus:outline-none cursor-pointer select-none transition-colors duration-200"
                     aria-expanded={isOpen}
+                    aria-controls={`faq-answer-${index}`}
                   >
                     <span className="pr-4">{item.q}</span>
                     <div
@@ -892,6 +891,7 @@ export default function Landing({ onGetStarted }) {
                   </button>
 
                   <div
+                    id={`faq-answer-${index}`}
                     className={`grid transition-all duration-300 ease-in-out ${
                       isOpen
                         ? "grid-rows-[1fr] opacity-100"

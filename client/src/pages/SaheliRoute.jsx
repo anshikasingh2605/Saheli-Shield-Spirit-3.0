@@ -353,7 +353,7 @@ export default function TrustedContacts() {
                 Starting point
               </label>
 
-              <div className="flex items-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3.5 focus-within:border-[#7E0E32] dark:focus-within:border-[#FB7185] focus-within:ring-2 focus-within:ring-[#7E0E32]/15">
+              <div className="flex items-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3.5 focus-within:border-[#7E0E32] dark:focus-within:border-[#FB7185] focus-within:ring-2 focus-within:ring-[#7E0E32]/15 transition-all">
                 <MapPin
                   size={18}
                   className="shrink-0 text-emerald-600 dark:text-emerald-400"
@@ -377,7 +377,7 @@ export default function TrustedContacts() {
                 Destination
               </label>
 
-              <div className="flex items-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3.5 focus-within:border-[#7E0E32] dark:focus-within:border-[#FB7185] focus-within:ring-2 focus-within:ring-[#7E0E32]/15">
+              <div className="flex items-center gap-3 rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-3.5 focus-within:border-[#7E0E32] dark:focus-within:border-[#FB7185] focus-within:ring-2 focus-within:ring-[#7E0E32]/15 transition-all">
                 <MapPin
                   size={18}
                   className="shrink-0 text-rose-500"
@@ -779,7 +779,7 @@ export default function TrustedContacts() {
                 type="button"
                 onClick={handleSOS}
                 disabled={journeyLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 hover:bg-red-700 px-4 py-3.5 text-sm font-bold text-white shadow-md shadow-red-600/30 transition active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 px-4 py-3.5 text-sm font-bold text-white shadow-md shadow-red-600/30 transition active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none disabled:opacity-60 cursor-pointer"
               >
                 <Phone size={18} />
                 Send SOS email

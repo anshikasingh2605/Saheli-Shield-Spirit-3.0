@@ -32,7 +32,7 @@ export default function Dashboard({ setPage, user }) {
             Plan safer journeys, stay alert online, and be part of a supportive community — all in one place.
           </p>
         </div>
-        <div className="hidden md:inline-flex items-center gap-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/90 dark:bg-[#161D2B]/90 px-4 py-1.5 text-xs font-bold text-[#7E0E32] dark:text-[#FB7185] self-start sm:self-center shadow-xs backdrop-blur-xs">
+        <div className="hidden md:inline-flex items-center gap-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/95 dark:bg-[#161D2B]/95 px-4 py-1.5 text-xs font-bold text-[#7E0E32] dark:text-[#FB7185] self-start sm:self-center shadow-xs backdrop-blur-sm">
           <Sparkles size={13} className="text-[#7E0E32] dark:text-[#FB7185]" />
           Safer Paths • Brighter Tomorrows
         </div>
@@ -64,7 +64,7 @@ export default function Dashboard({ setPage, user }) {
               <button
                 type="button"
                 onClick={() => setPage("route")}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185] hover:bg-[#7E0E32] hover:text-white transition shadow-2xs cursor-pointer"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#7E0E32]/10 dark:bg-[#FB7185]/15 text-[#7E0E32] dark:text-[#FB7185] hover:bg-[#7E0E32] hover:text-white dark:hover:bg-[#FB7185] dark:hover:text-[#0B0E14] transition shadow-2xs cursor-pointer"
                 aria-label="Open SaheliRoute"
               >
                 <ArrowRight size={17} />

@@ -150,6 +150,19 @@ export default function App() {
       return;
     }
 
+    // Retain verified Google OAuth sessions without requiring external backend validation
+    const savedUserStr = localStorage.getItem("sahelishield_user");
+    if (token.startsWith("google_") && savedUserStr) {
+      try {
+        const parsed = JSON.parse(savedUserStr);
+        if (parsed && (parsed.email || parsed.name)) {
+          setUser(parsed);
+          setAuthStatus("authenticated");
+          return;
+        }
+      } catch {}
+    }
+
     setAuthStatus("checking");
     setAuthError("");
 
@@ -466,10 +479,18 @@ export default function App() {
             </button>
 
             {/* User Avatar */}
-            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7E0E32] to-[#2D0B40] text-xs sm:text-sm font-bold text-white shadow-xs ring-1 ring-[#7E0E32]/30">
-              {(user.name || user.fullName || user.email || "U")
-                .charAt(0)
-                .toUpperCase()}
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7E0E32] to-[#2D0B40] text-xs sm:text-sm font-bold text-white shadow-xs ring-1 ring-[#7E0E32]/30 overflow-hidden">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name || "User avatar"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                (user.name || user.fullName || user.email || "U")
+                  .charAt(0)
+                  .toUpperCase()
+              )}
             </div>
 
             {/* Sign out */}
