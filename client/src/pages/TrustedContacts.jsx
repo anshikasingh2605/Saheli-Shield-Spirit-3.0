@@ -4,6 +4,7 @@ import {
   Users,
   UserPlus,
   Phone,
+  Mail,
   ShieldCheck,
   Pencil,
   Trash2,
@@ -18,6 +19,7 @@ import api from "../services/api";
 const EMPTY_FORM = {
   name: "",
   phone: "",
+  email: "",
   relationship: "",
   consentGiven: false,
 };
@@ -98,6 +100,7 @@ export default function TrustedContacts() {
     setForm({
       name: contact.name || "",
       phone: contact.phone || "",
+      email: contact.email || "",
       relationship: contact.relationship || "",
       consentGiven: Boolean(contact.consentGiven),
     });
@@ -133,6 +136,7 @@ export default function TrustedContacts() {
 
     const name = form.name.trim();
     const phone = normalizePhone(form.phone);
+    const email = form.email.trim().toLowerCase();
     const relationship = form.relationship.trim();
 
     if (name.length < 2) {
@@ -147,6 +151,11 @@ export default function TrustedContacts() {
       return;
     }
 
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFormError("Enter a valid email address for SOS alerts.");
+      return;
+    }
+
     if (!form.consentGiven) {
       setFormError(
         "Confirm that this person has agreed to be your trusted contact before saving."
@@ -157,6 +166,7 @@ export default function TrustedContacts() {
     const payload = {
       name,
       phone,
+      email,
       relationship,
       consentGiven: true,
     };
@@ -235,8 +245,7 @@ export default function TrustedContacts() {
         </div>
 
         <p className="mt-4 max-w-2xl text-slate-500">
-          Manage the people you have chosen to contact in an emergency.
-          Always confirm their permission before adding them.
+          Manage the people you have chosen to contact in an emergency. SOS alerts use their saved email address; keep their phone number for contact details. Always confirm their permission before adding them.
         </p>
       </section>
 
@@ -371,6 +380,29 @@ export default function TrustedContacts() {
                 </p>
               </div>
 
+              <div>
+                <label
+                  htmlFor="contact-email"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Email address
+                </label>
+                <input
+                  id="contact-email"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={updateField}
+                  autoComplete="email"
+                  required
+                  placeholder="trustedperson@example.com"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  SOS alerts will be sent to this email address.
+                </p>
+              </div>
+
               <div className="sm:col-span-2">
                 <label
                   htmlFor="contact-relationship"
@@ -481,6 +513,11 @@ export default function TrustedContacts() {
                       <p className="mt-2 flex items-center gap-2 break-all text-sm text-slate-600">
                         <Phone size={15} className="shrink-0" />
                         {contact.phone || "No phone number"}
+                      </p>
+
+                      <p className="mt-2 flex items-center gap-2 break-all text-sm text-slate-600">
+                        <Mail size={15} className="shrink-0" />
+                        {contact.email || "No email address saved"}
                       </p>
 
                       {contact.relationship && (
