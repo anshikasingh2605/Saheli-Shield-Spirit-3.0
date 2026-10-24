@@ -32,7 +32,7 @@ export default function Dashboard({ setPage, user }) {
             Plan safer journeys, stay alert online, and be part of a supportive community — all in one place.
           </p>
         </div>
-        <div className="hidden md:inline-flex items-center gap-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/90 dark:bg-[#161D2B]/90 px-4 py-1.5 text-xs font-bold text-[#7E0E32] dark:text-[#FB7185] self-start sm:self-center shadow-xs backdrop-blur-xs">
+        <div className="hidden md:inline-flex items-center gap-2 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/95 dark:bg-[#161D2B]/95 px-4 py-1.5 text-xs font-bold text-[#7E0E32] dark:text-[#FB7185] self-start sm:self-center shadow-xs backdrop-blur-sm">
           <Sparkles size={13} className="text-[#7E0E32] dark:text-[#FB7185]" />
           Safer Paths • Brighter Tomorrows
         </div>
