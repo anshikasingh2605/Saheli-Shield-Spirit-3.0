@@ -17,9 +17,64 @@ import ActivityHistory from "./pages/ActivityHistory";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
 
+const VALID_PAGES = ["dashboard", "route", "scam", "contacts", "history", "settings"];
+
+function getInitialPage() {
+  const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase().trim();
+  if (VALID_PAGES.includes(hash)) {
+    return hash;
+  }
+  const saved = localStorage.getItem("sahelishield_page");
+  if (VALID_PAGES.includes(saved)) {
+    return saved;
+  }
+  return "dashboard";
+}
+
 export default function App() {
-  const [page, setPage] = useState("dashboard");
+  const [page, setPage] = useState(getInitialPage);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [routeParams, setRouteParams] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("sahelishield_route_params");
+      return saved ? JSON.parse(saved) : { start: "", destination: "" };
+    } catch {
+      return { start: "", destination: "" };
+    }
+  });
+
+  function handleNavigateToRoute(params) {
+    if (params) {
+      setRouteParams(params);
+      try {
+        sessionStorage.setItem("sahelishield_route_params", JSON.stringify(params));
+      } catch {}
+    }
+    navigateTo("route");
+  }
+
+  // Keep URL hash and page state in sync on refresh and browser back/forward buttons
+  useEffect(() => {
+    function onHashChange() {
+      const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase().trim();
+      if (VALID_PAGES.includes(hash)) {
+        setPage(hash);
+        localStorage.setItem("sahelishield_page", hash);
+      }
+    }
+
+    if (!window.location.hash || !VALID_PAGES.includes(window.location.hash.replace(/^#\/?/, ""))) {
+      window.location.hash = `#/${page}`;
+    } else {
+      const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase().trim();
+      if (VALID_PAGES.includes(hash) && hash !== page) {
+        setPage(hash);
+      }
+    }
+
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [page]);
 
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("sahelishield_user");
@@ -108,16 +163,22 @@ export default function App() {
   function handleLogout() {
     localStorage.removeItem("sahelishield_token");
     localStorage.removeItem("sahelishield_user");
+    localStorage.removeItem("sahelishield_page");
+    sessionStorage.removeItem("sahelishield_route_params");
 
     setUser(null);
     setAuthStatus("unauthenticated");
     setAuthError("");
     setPage("dashboard");
+    window.location.hash = "#/dashboard";
     setSidebarOpen(false);
   }
 
   function navigateTo(nextPage) {
-    setPage(nextPage);
+    const target = VALID_PAGES.includes(nextPage) ? nextPage : "dashboard";
+    setPage(target);
+    localStorage.setItem("sahelishield_page", target);
+    window.location.hash = `#/${target}`;
     setSidebarOpen(false);
   }
 
@@ -133,7 +194,12 @@ export default function App() {
   function renderPage() {
     switch (page) {
       case "route":
-        return <SaheliRoute />;
+        return (
+          <SaheliRoute
+            initialStart={routeParams.start}
+            initialDestination={routeParams.destination}
+          />
+        );
 
       case "scam":
         return <ScamSaathi />;
@@ -149,7 +215,13 @@ export default function App() {
 
       case "dashboard":
       default:
-        return <Dashboard setPage={navigateTo} />;
+        return (
+          <Dashboard
+            setPage={navigateTo}
+            user={user}
+            onNavigateToRoute={handleNavigateToRoute}
+          />
+        );
     }
   }
 
