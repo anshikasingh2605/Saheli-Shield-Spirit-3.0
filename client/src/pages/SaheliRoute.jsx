@@ -408,20 +408,34 @@ export default function SaheliRoute() {
       );
 
       const result = response.data?.data;
-      const dispatches = Array.isArray(result?.dispatchDetails) ? result.dispatchDetails : [];
-      const sent = dispatches.filter((item) => item.delivery?.sent === true && item.delivery?.provider !== "simulated_sms").length;
-      const simulated = dispatches.filter((item) => item.delivery?.provider === "simulated_sms").length;
-      const failed = dispatches.filter((item) => item.delivery?.sent !== true).length;
+      const dispatches = Array.isArray(result?.dispatchDetails)
+        ? result.dispatchDetails
+        : [];
+      const isSimulated = (item) =>
+        item?.delivery?.provider === "simulated_sms" ||
+        item?.delivery?.simulated === true;
+      const realAccepted = (item) =>
+        item?.delivery?.sent === true && !isSimulated(item);
+      const sent = dispatches.filter(realAccepted).length;
+      const simulated = dispatches.filter(isSimulated).length;
+      const failed = dispatches.filter(
+        (item) => !isSimulated(item) && item?.delivery?.sent !== true
+      ).length;
       const details = dispatches.map((item) => {
-        const provider = item.delivery?.provider;
-        const state = provider === "simulated_sms" ? "SIMULATED (not a real SMS)"
-          : item.delivery?.sent === true ? `accepted by ${provider || "SMS provider"}`
-          : `FAILED${item.delivery?.error ? `: ${item.delivery.error}` : ""}`;
-        return `${item.name || item.phone}: ${state}`;
+        const provider = item?.delivery?.provider;
+        const delivery = item?.delivery || {};
+        const recipient = item?.name || item?.phone || "Trusted contact";
+        const state = isSimulated(item)
+          ? "SIMULATED — no real SMS was sent"
+          : delivery.sent === true
+            ? `accepted by ${provider || "SMS provider"}; delivery not guaranteed`
+            : `FAILED / UNCONFIRMED${delivery.error ? `: ${delivery.error}` : ""}`;
+        return `${recipient}: ${state}`;
       });
       setNotice([
-        `SOS request processed. ${sent} SMS request(s) accepted by a real provider, ${simulated} simulated, ${failed} failed/unconfirmed.`,
+        `SOS request processed. ${sent} SMS request(s) accepted by a real provider, ${simulated} simulated, ${failed} failed/unconfirmed. Provider acceptance does not confirm delivery.`,
         result?.mapLink ? `Location link: ${result.mapLink}` : "",
+        dispatches.length === 0 ? "No per-contact delivery details were returned by the backend." : "",
         ...details,
       ].filter(Boolean).join("\n"));
     } catch (err) {
