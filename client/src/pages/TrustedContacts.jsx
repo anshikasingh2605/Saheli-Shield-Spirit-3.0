@@ -5,14 +5,14 @@ import {
   UserPlus,
   Phone,
   Mail,
-  ShieldCheck,
-  Pencil,
-  Trash2,
   RefreshCw,
   X,
   CheckCircle2,
   AlertCircle,
   HeartHandshake,
+  Pencil,
+  Trash2,
+  ShieldCheck,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -26,8 +26,8 @@ const EMPTY_FORM = {
 
 function getErrorMessage(error) {
   return (
-    error.response?.data?.message ||
-    error.message ||
+    error?.response?.data?.message ||
+    error?.message ||
     "Something went wrong. Please try again."
   );
 }
@@ -46,8 +46,12 @@ function normalizePhone(phone) {
   return phone.trim().replace(/[\s()-]/g, "");
 }
 
-function validPhone(phone) {
+function isValidPhone(phone) {
   return /^\+?[1-9]\d{7,14}$/.test(normalizePhone(phone));
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export default function TrustedContacts() {
@@ -71,7 +75,9 @@ export default function TrustedContacts() {
       const savedContacts = extractContacts(response);
 
       if (!savedContacts) {
-        throw new Error("The server returned an unexpected contacts response.");
+        throw new Error(
+          "Unexpected contacts response from the server."
+        );
       }
 
       setContacts(savedContacts);
@@ -88,7 +94,7 @@ export default function TrustedContacts() {
 
   const openAddForm = () => {
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM });
     setFormError("");
     setError("");
     setNotice("");
@@ -115,7 +121,7 @@ export default function TrustedContacts() {
 
     setFormOpen(false);
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM });
     setFormError("");
   };
 
@@ -130,6 +136,7 @@ export default function TrustedContacts() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
     setFormError("");
     setError("");
     setNotice("");
@@ -144,21 +151,23 @@ export default function TrustedContacts() {
       return;
     }
 
-    if (!validPhone(phone)) {
+    if (!isValidPhone(phone)) {
       setFormError(
-        "Enter a valid phone number in international format, for example +919876543210."
+        "Enter a valid phone number with country code, for example +919876543210."
       );
       return;
     }
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setFormError("Enter a valid email address for SOS alerts.");
+    if (!isValidEmail(email)) {
+      setFormError(
+        "Enter a valid email address for emergency SOS alerts."
+      );
       return;
     }
 
     if (!form.consentGiven) {
       setFormError(
-        "Confirm that this person has agreed to be your trusted contact before saving."
+        "Please confirm that this person has agreed to receive safety alerts."
       );
       return;
     }
@@ -176,15 +185,20 @@ export default function TrustedContacts() {
     try {
       if (editingId) {
         await api.patch(`/contacts/${editingId}`, payload);
-        setNotice("Trusted contact updated successfully.");
       } else {
         await api.post("/contacts", payload);
-        setNotice("Trusted contact saved successfully.");
       }
+
+      setNotice(
+        editingId
+          ? "Trusted contact updated successfully."
+          : "Trusted contact saved successfully."
+      );
 
       setFormOpen(false);
       setEditingId(null);
-      setForm(EMPTY_FORM);
+      setForm({ ...EMPTY_FORM });
+
       await loadContacts();
     } catch (err) {
       setFormError(getErrorMessage(err));
@@ -218,7 +232,7 @@ export default function TrustedContacts() {
         previous.filter((item) => (item._id || item.id) !== id)
       );
 
-      setNotice("Trusted contact removed.");
+      setNotice("Trusted contact removed successfully.");
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -238,6 +252,7 @@ export default function TrustedContacts() {
             <p className="text-sm font-medium text-violet-700">
               YOUR SAFETY NETWORK
             </p>
+
             <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
               Trusted Contacts
             </h1>
@@ -245,7 +260,10 @@ export default function TrustedContacts() {
         </div>
 
         <p className="mt-4 max-w-2xl text-slate-500">
-          Manage the people you have chosen to contact in an emergency. SOS alerts use their saved email address; keep their phone number for contact details. Always confirm their permission before adding them.
+          Manage the people you trust in an emergency. SaheliShield
+          uses their saved email addresses for SOS alerts. Keep their
+          phone numbers available for contact purposes and always
+          obtain their consent before adding them.
         </p>
       </section>
 
@@ -260,6 +278,7 @@ export default function TrustedContacts() {
               <h2 className="font-semibold text-slate-900">
                 Your trusted people
               </h2>
+
               <p className="mt-1 text-sm text-slate-500">
                 {loading
                   ? "Loading contacts..."
@@ -344,6 +363,7 @@ export default function TrustedContacts() {
                 >
                   Full name
                 </label>
+
                 <input
                   id="contact-name"
                   name="name"
@@ -364,6 +384,7 @@ export default function TrustedContacts() {
                 >
                   Phone number
                 </label>
+
                 <input
                   id="contact-phone"
                   name="phone"
@@ -375,6 +396,7 @@ export default function TrustedContacts() {
                   placeholder="+919876543210"
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
                 />
+
                 <p className="mt-1 text-xs text-slate-500">
                   Include the country code.
                 </p>
@@ -387,6 +409,7 @@ export default function TrustedContacts() {
                 >
                   Email address
                 </label>
+
                 <input
                   id="contact-email"
                   name="email"
@@ -394,10 +417,12 @@ export default function TrustedContacts() {
                   value={form.email}
                   onChange={updateField}
                   autoComplete="email"
+                  maxLength={254}
                   required
                   placeholder="trustedperson@example.com"
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
                 />
+
                 <p className="mt-1 text-xs text-slate-500">
                   SOS alerts will be sent to this email address.
                 </p>
@@ -410,6 +435,7 @@ export default function TrustedContacts() {
                 >
                   Relationship (optional)
                 </label>
+
                 <input
                   id="contact-relationship"
                   name="relationship"
@@ -428,11 +454,13 @@ export default function TrustedContacts() {
                 name="consentGiven"
                 checked={form.consentGiven}
                 onChange={updateField}
+                required
                 className="mt-1 h-4 w-4 accent-violet-700"
               />
+
               <span className="text-sm leading-6 text-slate-700">
-                This person has agreed to be my trusted contact and to receive
-                safety alerts when needed.
+                This person has agreed to be my trusted contact and to
+                receive safety alerts when needed.
               </span>
             </label>
 
@@ -448,7 +476,10 @@ export default function TrustedContacts() {
                 disabled={saving}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-700 px-5 py-3 text-sm font-semibold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {saving && <RefreshCw size={16} className="animate-spin" />}
+                {saving && (
+                  <RefreshCw size={16} className="animate-spin" />
+                )}
+
                 {saving
                   ? "Saving..."
                   : editingId
@@ -471,8 +502,27 @@ export default function TrustedContacts() {
         <div className="mt-6 space-y-3">
           {loading && (
             <div className="py-10 text-center text-slate-500">
-              <RefreshCw size={25} className="mx-auto animate-spin" />
-              <p className="mt-3 text-sm">Loading your saved contacts...</p>
+              <RefreshCw
+                size={25}
+                className="mx-auto animate-spin"
+              />
+              <p className="mt-3 text-sm">
+                Loading your saved contacts...
+              </p>
+            </div>
+          )}
+
+          {!loading && !error && contacts.length === 0 && (
+            <div className="rounded-xl border border-dashed border-slate-300 py-10 text-center">
+              <Users size={32} className="mx-auto text-slate-400" />
+
+              <h3 className="mt-3 font-semibold text-slate-800">
+                No trusted contacts yet
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Add someone you trust to receive your email SOS alerts.
+              </p>
             </div>
           )}
 
@@ -521,26 +571,24 @@ export default function TrustedContacts() {
                       </p>
 
                       {contact.relationship && (
-                        <p className="mt-1 text-sm text-slate-500">
-                          {contact.relationship}
+                        <p className="mt-2 text-sm text-slate-500">
+                          Relationship: {contact.relationship}
                         </p>
                       )}
 
-                      <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                      <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
                         <ShieldCheck size={14} />
-                        {hasConsent
-                          ? "Eligible for SOS notification, subject to backend rules and delivery configuration."
-                          : "Not eligible for SOS notification when consent is required."}
+                        Email SOS recipient
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 gap-2 sm:justify-end">
+                  <div className="flex shrink-0 gap-2 sm:flex-col">
                     <button
                       type="button"
                       onClick={() => openEditForm(contact)}
-                      disabled={deletingId === id}
-                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                      disabled={Boolean(deletingId)}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                     >
                       <Pencil size={15} />
                       Edit
@@ -550,51 +598,22 @@ export default function TrustedContacts() {
                       type="button"
                       onClick={() => handleDelete(contact)}
                       disabled={deletingId === id}
-                      className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
                     >
                       {deletingId === id ? (
                         <RefreshCw size={15} className="animate-spin" />
                       ) : (
                         <Trash2 size={15} />
                       )}
-                      Remove
+
+                      {deletingId === id ? "Removing..." : "Remove"}
                     </button>
                   </div>
                 </article>
               );
             })}
-
-          {!loading && contacts.length === 0 && !error && (
-            <div className="rounded-xl border border-dashed border-slate-300 px-5 py-10 text-center">
-              <Users size={30} className="mx-auto text-slate-400" />
-              <h3 className="mt-3 font-semibold text-slate-800">
-                No trusted contacts yet
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Add someone who has agreed to receive your safety alerts.
-              </p>
-              <button
-                type="button"
-                onClick={openAddForm}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-800"
-              >
-                <UserPlus size={16} />
-                Add your first contact
-              </button>
-            </div>
-          )}
         </div>
       </section>
-
-      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
-        <ShieldCheck size={19} className="mt-0.5 shrink-0" />
-        <p>
-          <strong>Safety reminder:</strong> Saving a contact does not guarantee
-          SMS delivery. SOS delivery depends on backend processing, valid
-          recipient numbers, provider configuration, and network availability.
-          Never rely on this prototype as your only emergency channel.
-        </p>
-      </div>
     </div>
   );
 }

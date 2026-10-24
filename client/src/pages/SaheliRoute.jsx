@@ -409,20 +409,21 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
       setActiveJourney(journey);
       setJourneyStatus("active");
 
-      let locationSaved = false;
       try {
         await api.patch(`/journeys/${journey._id}/location`, initialLocation);
-        locationSaved = true;
-        lastLocationSentRef.current = Date.now();
       } catch (locationError) {
-        setError(`Journey was created, but the initial GPS position could not be saved: ${getError(locationError)}`);
+        // Fail closed: do not leave an active journey that has no confirmed initial GPS save.
+        try { await api.post(`/journeys/${journey._id}/complete`); } catch { /* keep the original location error */ }
+        setActiveJourney(null);
+        setJourneyStatus("idle");
+        setCurrentLocation(null);
+        throw new Error(`Your location permission was granted, but the backend could not save your initial GPS position. The journey was not started. ${getError(locationError)}`);
       }
 
+      lastLocationSentRef.current = Date.now();
       // Start continuous tracking immediately, using the newly created journey ID.
       startLocationTracking(journey._id);
-      setNotice(locationSaved
-        ? "Journey started. Your current GPS position was saved and live location tracking is enabled."
-        : "Journey started with GPS permission enabled. The first location save failed; live tracking will retry on the next GPS update.");
+      setNotice("Journey started. Your current GPS position was saved and live location tracking is enabled.");
     } catch (err) {
       const geoMessages = {
         1: "Location permission is required. Allow location access in your browser settings, then press Start journey again.",
@@ -476,56 +477,40 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
 
   const handleSOS = async () => {
     if (!activeJourney?._id) {
-      setError(
-        "There is no active journey. Start a journey before triggering SOS."
-      );
+      setError("There is no active journey. Start a journey before triggering SOS.");
       return;
     }
 
     const confirmed = window.confirm(
-      "Send an emergency SOS request for your active journey? Continue only if you need emergency assistance."
+      "Send an emergency SOS email to your consented trusted contacts? Continue only if you need emergency assistance."
     );
-
     if (!confirmed) return;
 
     setJourneyLoading(true);
     setError("");
     setNotice("");
-
     try {
-      const response = await api.post(
-        `/journeys/${activeJourney._id}/sos`
-      );
-
+      const response = await api.post(`/journeys/${activeJourney._id}/sos`);
       const result = response.data?.data;
-      const dispatches = Array.isArray(result?.dispatchDetails)
-        ? result.dispatchDetails
-        : [];
-      const isSimulated = (item) =>
-        item?.delivery?.provider === "simulated_sms" ||
-        item?.delivery?.simulated === true;
-      const realAccepted = (item) =>
-        item?.delivery?.sent === true && !isSimulated(item);
-      const sent = dispatches.filter(realAccepted).length;
-      const simulated = dispatches.filter(isSimulated).length;
-      const failed = dispatches.filter(
-        (item) => !isSimulated(item) && item?.delivery?.sent !== true
-      ).length;
+      const dispatches = Array.isArray(result?.dispatchDetails) ? result.dispatchDetails : [];
+      const sent = dispatches.filter((item) => item?.delivery?.sent === true).length;
+      const failed = dispatches.filter((item) => item?.delivery?.sent !== true).length;
       const details = dispatches.map((item) => {
-        const provider = item?.delivery?.provider;
+        const recipient = item?.email || item?.recipient || item?.name || "Trusted contact";
         const delivery = item?.delivery || {};
-        const recipient = item?.name || item?.phone || "Trusted contact";
-        const state = isSimulated(item)
-          ? "SIMULATED — no real SMS was sent"
-          : delivery.sent === true
-            ? `accepted by ${provider || "SMS provider"}; delivery not guaranteed`
-            : `FAILED / UNCONFIRMED${delivery.error ? `: ${delivery.error}` : ""}`;
-        return `${recipient}: ${state}`;
+        if (delivery.sent === true) {
+          return `${recipient}: accepted by email provider; inbox delivery is not guaranteed.`;
+        }
+        return `${recipient}: email failed${delivery.error ? ` (${delivery.error})` : "."}`;
       });
+
+      const summary = result?.notifiedContactsCount === 0 || dispatches.length === 0
+        ? "SOS request reached the server, but no email delivery results were returned. Check that you have saved trusted contacts with valid email addresses and consent."
+        : `SOS email processing finished: ${sent} accepted by the email provider, ${failed} failed. Provider acceptance does not guarantee inbox delivery.`;
+
       setNotice([
-        `SOS request processed. ${sent} SMS request(s) accepted by a real provider, ${simulated} simulated, ${failed} failed/unconfirmed. Provider acceptance does not confirm delivery.`,
-        result?.mapLink ? `Location link: ${result.mapLink}` : "",
-        dispatches.length === 0 ? "No per-contact delivery details were returned by the backend." : "",
+        summary,
+        result?.mapLink ? `Location link: ${result.mapLink}` : "No map link was returned by the server.",
         ...details,
       ].filter(Boolean).join("\n"));
     } catch (err) {
@@ -868,7 +853,7 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
               >
                 <Phone size={19} />
-                SOS — Emergency help
+                Send SOS email
               </button>
 
               <p className="mt-2 flex items-start gap-2 text-xs leading-5 text-slate-500">
@@ -876,9 +861,7 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
                   className="mt-0.5 shrink-0 text-amber-600"
                   size={15}
                 />
-                SOS requests use the backend. Actual emergency
-                notifications depend on the server configuration and
-                successful delivery.
+                Sends an emergency email to your consented trusted contacts. Provider acceptance does not guarantee inbox delivery.
               </p>
             </div>
           </section>
