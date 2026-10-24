@@ -1,555 +1,317 @@
 
-import { useEffect, useRef, useState } from "react";
-import LeafletRouteMap from "../components/LeafletRouteMap";
+import { useCallback, useEffect, useState } from "react";
 import {
-  MapPin,
-  Navigation,
-  Clock,
-  Route,
-  ShieldCheck,
-  AlertTriangle,
+  Users,
+  UserPlus,
   Phone,
-  Play,
-  CheckCircle2,
-  RotateCcw,
+  Mail,
   RefreshCw,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  HeartHandshake,
+  Pencil,
+  Trash2,
+  ShieldCheck,
 } from "lucide-react";
 import api from "../services/api";
-import { Star, MapPinned } from "lucide-react";
 
-const geocodePlace = async (place) => {
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(place)}`
+const EMPTY_FORM = {
+  name: "",
+  phone: "",
+  email: "",
+  relationship: "",
+  consentGiven: false,
+};
+
+function getErrorMessage(error) {
+  return (
+    error?.response?.data?.message ||
+    error?.message ||
+    "Something went wrong. Please try again."
   );
+}
 
-  if (!response.ok) {
-    throw new Error("Unable to look up this location. Please try again.");
-  }
+function extractContacts(response) {
+  const data = response?.data?.data;
 
-  const results = await response.json();
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.contacts)) return data.contacts;
+  if (Array.isArray(data?.data)) return data.data;
 
-  if (!results.length) {
-    throw new Error(`Location not found: ${place}`);
-  }
+  return null;
+}
 
-  return {
-    lat: Number(results[0].lat),
-    lng: Number(results[0].lon),
-    label: place,
-  };
-};
+function normalizePhone(phone) {
+  return phone.trim().replace(/[\s()-]/g, "");
+}
 
-const getFeedbackStorageKey = () => {
-  try {
-    const user = JSON.parse(localStorage.getItem("sahelishield_user") || "null");
-    const identity = user?.id || user?._id || user?.email || "current-user";
-    return `sahelishield_pending_route_feedback_${identity}`;
-  } catch {
-    return "sahelishield_pending_route_feedback_current-user";
-  }
-};
+function isValidPhone(phone) {
+  return /^\+?[1-9]\d{7,14}$/.test(normalizePhone(phone));
+}
 
-export default function SaheliRoute({ initialStart = "", initialDestination = "" }) {
-  const [start, setStart] = useState(initialStart || "");
-  const [destination, setDestination] = useState(initialDestination || "");
-  const [routes, setRoutes] = useState([]);
-  const [selectedRoute, setSelectedRoute] = useState(null);
-  const [originPoint, setOriginPoint] = useState(null);
-  const [destinationPoint, setDestinationPoint] = useState(null);
-  const [activeJourney, setActiveJourney] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [journeyLoading, setJourneyLoading] = useState(false);
-  const [journeyStatus, setJourneyStatus] = useState("idle");
-  const [notice, setNotice] = useState("");
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export default function TrustedContacts() {
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState("");
-  const [tracking, setTracking] = useState(false);
-  const [locationStatus, setLocationStatus] = useState("Location sharing is off.");
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const locationWatchIdRef = useRef(null);
-  const lastLocationSentRef = useRef(0);
-  const [etaMinutes, setEtaMinutes] = useState(15);
-  const [feedbackRating, setFeedbackRating] = useState(5);
-  const [feedbackComment, setFeedbackComment] = useState("");
-  const [feedbackItems, setFeedbackItems] = useState([]);
-  const [feedbackLoading, setFeedbackLoading] = useState(false);
-  const [feedbackContext, setFeedbackContext] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(getFeedbackStorageKey()) || "null");
-    } catch {
-      return null;
-    }
-  });
+  const [notice, setNotice] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState("");
 
-  const getError = (err) =>
-    err.response?.data?.message ||
-    err.message ||
-    "Something went wrong. Please try again.";
-
-  const loadActiveJourney = async () => {
-    try {
-      const response = await api.get("/journeys/active");
-      const journey = response.data?.data;
-
-      setActiveJourney(journey || null);
-      if (journey?.lastLocation && Number.isFinite(Number(journey.lastLocation.lat)) && Number.isFinite(Number(journey.lastLocation.lng))) {
-        setCurrentLocation({
-          lat: Number(journey.lastLocation.lat),
-          lng: Number(journey.lastLocation.lng),
-          accuracy: Number(journey.lastLocation.accuracy || 0),
-          timestamp: journey.lastLocation.updatedAt || journey.updatedAt || new Date().toISOString(),
-          isSimulated: Boolean(journey.lastLocation.isSimulated),
-        });
-        setLocationStatus(journey.lastLocation.isSimulated
-          ? "Last saved position was simulated, not live GPS."
-          : "Showing last saved location. Enable tracking for a fresh GPS fix.");
-      } else {
-        setCurrentLocation(null);
-      }
-
-      if (journey) {
-        setJourneyStatus("active");
-        setStart(journey.origin?.label || "");
-        setDestination(journey.destination?.label || "");
-        setOriginPoint(journey.origin);
-        setDestinationPoint(journey.destination);
-        // Geometry is not stored in the Journey model, so request fresh route
-        // options and match the saved route reference when the page is restored.
-        try {
-          const routeResponse = await api.post("/routes/calculate", {
-            origin: journey.origin,
-            destination: journey.destination,
-          });
-          const payload = routeResponse.data?.data;
-          const restoredRoutes = Array.isArray(payload) ? payload : payload?.routes;
-          if (Array.isArray(restoredRoutes) && restoredRoutes.length) {
-            setRoutes(restoredRoutes);
-            const matched = restoredRoutes.find((item) => item.routeId === journey.routeRef)
-              || restoredRoutes.find((item) => item.type === journey.routeType)
-              || restoredRoutes[0];
-            setSelectedRoute(matched);
-          } else {
-            setRoutes([]);
-            setSelectedRoute(null);
-          }
-        } catch (routeError) {
-          console.warn("Could not restore route geometry", routeError);
-          setRoutes([]);
-          setSelectedRoute(null);
-        }
-        setNotice("Your active journey was restored. Enable live location sharing to update your GPS position.");
-      } else {
-        setJourneyStatus("idle");
-      }
-    } catch (err) {
-      setError(getError(err));
-    }
-  };
-
-  useEffect(() => {
-    loadActiveJourney();
-  }, []);
-
-  // Restore route geometry when available on the saved journey.
-  const refreshRouteFeedback = async (routeRef) => {
-    if (!routeRef) return;
-    try {
-      const response = await api.get("/routes/feedback", { params: { routeRef, limit: 10 } });
-      const items = response.data?.data;
-      setFeedbackItems(Array.isArray(items) ? items : []);
-    } catch (err) {
-      console.warn("Could not load route feedback", err);
-    }
-  };
-
-  const stopLocationTracking = () => {
-    if (locationWatchIdRef.current !== null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(locationWatchIdRef.current);
-      locationWatchIdRef.current = null;
-    }
-    setTracking(false);
-    setLocationStatus("Location sharing is paused.");
-  };
-
-  const startLocationTracking = (journeyId = activeJourney?._id) => {
-    if (!journeyId) {
-      setLocationStatus("Start a journey before sharing live location.");
-      return;
-    }
-    if (!navigator.geolocation) {
-      setLocationStatus("This browser does not support geolocation.");
-      return;
-    }
-    if (!window.isSecureContext) {
-      setLocationStatus("Location requires HTTPS or localhost.");
-      return;
-    }
-
-    if (locationWatchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(locationWatchIdRef.current);
-    }
-
-    setError("");
-    setLocationStatus("Waiting for browser location permission...");
-    locationWatchIdRef.current = navigator.geolocation.watchPosition(
-      async (position) => {
-        const location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          timestamp: new Date(position.timestamp).toISOString(),
-          isSimulated: false,
-        };
-        setCurrentLocation(location);
-        setLocationStatus(`Location available (accuracy ±${Math.round(location.accuracy)} m).`);
-
-        const now = Date.now();
-        if (now - lastLocationSentRef.current < 10000) return;
-        lastLocationSentRef.current = now;
-
-        try {
-          await api.patch(`/journeys/${journeyId}/location`, location);
-          setLocationStatus(`Live location shared at ${new Date().toLocaleTimeString()}.`);
-        } catch (err) {
-          setLocationStatus("Location was detected, but the server could not save it.");
-          setError(getError(err));
-        }
-      },
-      (geoError) => {
-        const messages = {
-          1: "Location permission denied. Allow Location for this site in browser settings, then try again.",
-          2: "Your location could not be determined. Check device location/GPS and network.",
-          3: "Location request timed out. Try enabling location again.",
-        };
-        setLocationStatus(messages[geoError.code] || `Location error: ${geoError.message}`);
-        setTracking(false);
-        if (locationWatchIdRef.current !== null) {
-          navigator.geolocation.clearWatch(locationWatchIdRef.current);
-          locationWatchIdRef.current = null;
-        }
-      },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-    );
-    setTracking(true);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (locationWatchIdRef.current !== null && navigator.geolocation) {
-        navigator.geolocation.clearWatch(locationWatchIdRef.current);
-      }
-    };
-  }, []);
-
-  const extendEta = async () => {
-    if (!activeJourney?._id) return;
-    setJourneyLoading(true); setError(""); setNotice("");
-    try {
-      const response = await api.patch(`/journeys/${activeJourney._id}/extend`, { additionalMinutes: Number(etaMinutes) });
-      const updated = response.data?.data;
-      setActiveJourney((current) => current ? { ...current, eta: updated?.eta || current.eta, extendedMinutes: updated?.extendedMinutes ?? current.extendedMinutes } : current);
-      setNotice(`ETA extended by ${etaMinutes} minutes.`);
-    } catch (err) { setError(getError(err)); }
-    finally { setJourneyLoading(false); }
-  };
-
-  const submitRouteFeedback = async (event) => {
-    event.preventDefault();
-    if (!feedbackContext?.routeRef) {
-      setError("Complete a journey before submitting route feedback.");
-      return;
-    }
-
-    setFeedbackLoading(true);
-    setError("");
-    setNotice("");
-    try {
-      await api.post("/routes/feedback", {
-        journeyId: feedbackContext.journeyId || undefined,
-        routeRef: feedbackContext.routeRef,
-        originLabel: feedbackContext.originLabel || start,
-        destinationLabel: feedbackContext.destinationLabel || destination,
-        rating: Number(feedbackRating),
-        comment: feedbackComment.trim(),
-        safetyTags: [],
-        timeOfDay: new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening",
-        travelDurationMinutes: Number(feedbackContext.durationMinutes) || 0,
-      });
-
-      setFeedbackComment("");
-      setFeedbackContext(null);
-      localStorage.removeItem(getFeedbackStorageKey());
-      setNotice("Thank you. Your feedback was submitted. It will be available again after you complete another journey.");
-      await refreshRouteFeedback(feedbackContext.routeRef);
-    } catch (err) {
-      setError(getError(err));
-    } finally {
-      setFeedbackLoading(false);
-    }
-  };
-
-  const handleFindRoutes = async (event) => {
-    if (event?.preventDefault) {
-      event.preventDefault();
-    }
-    setError("");
-    setNotice("");
-
-    if (!start.trim() || !destination.trim()) {
-      setError("Please enter both your starting point and destination.");
-      return;
-    }
-
-    if (start.trim().toLowerCase() === destination.trim().toLowerCase()) {
-      setError("Your starting point and destination must be different.");
-      return;
-    }
-
-    if (activeJourney) {
-      setError("Complete your active journey before planning another one.");
-      return;
-    }
-
+  const loadContacts = useCallback(async () => {
     setLoading(true);
-    setRoutes([]);
-    setSelectedRoute(null);
-    setOriginPoint(null);
-    setDestinationPoint(null);
+    setError("");
 
     try {
-      const origin = await geocodePlace(start.trim());
-      const destinationLocation = await geocodePlace(
-        destination.trim()
-      );
+      const response = await api.get("/contacts");
+      const savedContacts = extractContacts(response);
 
-      // Detect user's local time of day so backend applies time-sensitive safety scoring
-      const getTimeOfDay = () => {
-        const h = new Date().getHours();
-        if (h >= 23 || h < 5) return "late_night";
-        if (h >= 19) return "night";
-        if (h >= 16) return "evening";
-        if (h >= 12) return "afternoon";
-        return "morning";
-      };
-
-      const response = await api.post("/routes/calculate", {
-        origin,
-        destination: destinationLocation,
-        timeOfDay: getTimeOfDay(),
-      });
-
-      const result = response.data?.data;
-      const routeOptions = Array.isArray(result)
-        ? result
-        : result?.routes;
-
-      if (!Array.isArray(routeOptions) || routeOptions.length === 0) {
-        throw new Error("No route options were returned by the backend.");
+      if (!savedContacts) {
+        throw new Error(
+          "Unexpected contacts response from the server."
+        );
       }
 
-      setOriginPoint(origin);
-      setDestinationPoint(destinationLocation);
-      setRoutes(routeOptions);
-      setSelectedRoute(routeOptions[0]);
-      setJourneyStatus("idle");
-      setNotice(
-        "Routes loaded successfully. Your map is ready. Select a route to start your journey."
-      );
+      setContacts(savedContacts);
     } catch (err) {
-      setError(getError(err));
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const startJourney = async () => {
-    if (!selectedRoute || !originPoint || !destinationPoint) {
-      setError("Find and select a route before starting your journey.");
-      return;
-    }
+  useEffect(() => {
+    loadContacts();
+  }, [loadContacts]);
 
-    if (!navigator.geolocation) {
-      setError("Location is required to start a journey, but this browser does not support geolocation.");
-      return;
-    }
-
-    if (!window.isSecureContext) {
-      setError("Location permission requires HTTPS or localhost. Open the secure version of this site and try again.");
-      return;
-    }
-
-    setJourneyLoading(true);
+  const openAddForm = () => {
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM });
+    setFormError("");
     setError("");
-    setNotice("Requesting your current location. A journey cannot start without location permission.");
-
-    try {
-      // Mandatory fresh GPS fix BEFORE creating the journey.
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 20000,
-          maximumAge: 0,
-        });
-      });
-
-      const initialLocation = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        timestamp: new Date(position.timestamp).toISOString(),
-        isSimulated: false,
-      };
-      setCurrentLocation(initialLocation);
-      setLocationStatus(`GPS permission granted (accuracy ±${Math.round(initialLocation.accuracy)} m). Starting journey...`);
-
-      const durationMinutes = Number(selectedRoute.durationMinutes) || 30;
-      const eta = new Date(Date.now() + (durationMinutes + 10) * 60 * 1000).toISOString();
-
-      const response = await api.post("/journeys", {
-        origin: originPoint,
-        destination: destinationPoint,
-        routeRef: selectedRoute.routeId,
-        routeType: selectedRoute.type,
-        eta,
-      });
-
-      const journey = response.data?.data;
-      if (!journey?._id) {
-        throw new Error("The backend did not return a journey ID.");
-      }
-
-      setActiveJourney(journey);
-      setJourneyStatus("active");
-
-      try {
-        await api.patch(`/journeys/${journey._id}/location`, initialLocation);
-      } catch (locationError) {
-        // Fail closed: do not leave an active journey that has no confirmed initial GPS save.
-        try { await api.post(`/journeys/${journey._id}/complete`); } catch { /* keep the original location error */ }
-        setActiveJourney(null);
-        setJourneyStatus("idle");
-        setCurrentLocation(null);
-        throw new Error(`Your location permission was granted, but the backend could not save your initial GPS position. The journey was not started. ${getError(locationError)}`);
-      }
-
-      lastLocationSentRef.current = Date.now();
-      // Start continuous tracking immediately, using the newly created journey ID.
-      startLocationTracking(journey._id);
-      setNotice("Journey started. Your current GPS position was saved and live location tracking is enabled.");
-    } catch (err) {
-      const geoMessages = {
-        1: "Location permission is required. Allow location access in your browser settings, then press Start journey again.",
-        2: "Your current location could not be determined. Enable device GPS/location and try again.",
-        3: "Getting your current location timed out. Move to an area with better GPS/network signal and try again.",
-      };
-      if (typeof err?.code === "number" && geoMessages[err.code]) {
-        setError(geoMessages[err.code]);
-      } else {
-        setError(getError(err));
-      }
-    } finally {
-      setJourneyLoading(false);
-    }
+    setNotice("");
+    setFormOpen(true);
   };
 
-  const completeJourney = async () => {
-    if (!activeJourney?._id) return;
+  const openEditForm = (contact) => {
+    setEditingId(contact._id || contact.id);
+    setForm({
+      name: contact.name || "",
+      phone: contact.phone || "",
+      email: contact.email || "",
+      relationship: contact.relationship || "",
+      consentGiven: Boolean(contact.consentGiven),
+    });
+    setFormError("");
+    setError("");
+    setNotice("");
+    setFormOpen(true);
+  };
 
-    setJourneyLoading(true);
+  const closeForm = () => {
+    if (saving) return;
+
+    setFormOpen(false);
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM });
+    setFormError("");
+  };
+
+  const updateField = (event) => {
+    const { name, value, type, checked } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    setFormError("");
     setError("");
     setNotice("");
 
-    try {
-      await api.post(`/journeys/${activeJourney._id}/complete`);
+    const name = form.name.trim();
+    const phone = normalizePhone(form.phone);
+    const email = form.email.trim().toLowerCase();
+    const relationship = form.relationship.trim();
 
-      stopLocationTracking();
-      const completedFeedbackContext = {
-        journeyId: activeJourney._id,
-        routeRef: selectedRoute?.routeId || activeJourney.routeRef,
-        originLabel: originPoint?.label || activeJourney.origin?.label || start,
-        destinationLabel: destinationPoint?.label || activeJourney.destination?.label || destination,
-        durationMinutes: Number(selectedRoute?.durationMinutes) || 0,
-        completedAt: new Date().toISOString(),
-      };
-      setActiveJourney(null);
-      setCurrentLocation(null);
-      setJourneyStatus("completed");
-      if (completedFeedbackContext.routeRef) {
-        setFeedbackContext(completedFeedbackContext);
-        localStorage.setItem(getFeedbackStorageKey(), JSON.stringify(completedFeedbackContext));
-        await refreshRouteFeedback(completedFeedbackContext.routeRef);
+    if (name.length < 2) {
+      setFormError("Enter a name with at least 2 characters.");
+      return;
+    }
+
+    if (!isValidPhone(phone)) {
+      setFormError(
+        "Enter a valid phone number with country code, for example +919876543210."
+      );
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setFormError(
+        "Enter a valid email address for emergency SOS alerts."
+      );
+      return;
+    }
+
+    if (!form.consentGiven) {
+      setFormError(
+        "Please confirm that this person has agreed to receive safety alerts."
+      );
+      return;
+    }
+
+    const payload = {
+      name,
+      phone,
+      email,
+      relationship,
+      consentGiven: true,
+    };
+
+    setSaving(true);
+
+    try {
+      if (editingId) {
+        await api.patch(`/contacts/${editingId}`, payload);
+      } else {
+        await api.post("/contacts", payload);
       }
-      setNotice("Journey completed and saved. You can now submit feedback for this journey.");
+
+      setNotice(
+        editingId
+          ? "Trusted contact updated successfully."
+          : "Trusted contact saved successfully."
+      );
+
+      setFormOpen(false);
+      setEditingId(null);
+      setForm({ ...EMPTY_FORM });
+
+      await loadContacts();
     } catch (err) {
-      setError(getError(err));
+      setFormError(getErrorMessage(err));
     } finally {
-      setJourneyLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleSOS = async () => {
-    if (!activeJourney?._id) {
-      setError("There is no active journey. Start a journey before triggering SOS.");
+  const handleDelete = async (contact) => {
+    const id = contact._id || contact.id;
+
+    if (!id) {
+      setError("This contact has no valid record ID.");
       return;
     }
 
     const confirmed = window.confirm(
-      "Send an emergency SOS email to your consented trusted contacts? Continue only if you need emergency assistance."
+      `Remove ${contact.name || "this contact"} from your trusted contacts?`
     );
+
     if (!confirmed) return;
 
-    setJourneyLoading(true);
+    setDeletingId(id);
     setError("");
     setNotice("");
+
     try {
-      const response = await api.post(`/journeys/${activeJourney._id}/sos`);
-      const result = response.data?.data;
-      const dispatches = Array.isArray(result?.dispatchDetails) ? result.dispatchDetails : [];
-      const sent = dispatches.filter((item) => item?.delivery?.sent === true).length;
-      const failed = dispatches.filter((item) => item?.delivery?.sent !== true).length;
-      const details = dispatches.map((item) => {
-        const recipient = item?.email || item?.phone || item?.name || "Trusted contact";
-        const delivery = item?.delivery || {};
-        if (delivery.sent === true) {
-          return `${recipient}: accepted by email provider; inbox delivery is not guaranteed.`;
-        }
-        return `${recipient}: email failed${delivery.error ? ` (${delivery.error})` : "."}`;
-      });
+      await api.delete(`/contacts/${id}`);
 
-      const summary = result?.notifiedContactsCount === 0 || dispatches.length === 0
-        ? "SOS request reached the server, but no email delivery results were returned. Check that you have saved trusted contacts with valid email addresses and consent."
-        : `SOS email processing finished: ${sent} accepted by the email provider, ${failed} failed. Provider acceptance does not guarantee inbox delivery.`;
+      setContacts((previous) =>
+        previous.filter((item) => (item._id || item.id) !== id)
+      );
 
-      setNotice([
-        summary,
-        result?.mapLink ? `Location link: ${result.mapLink}` : "No map link was returned by the server.",
-        ...details,
-      ].filter(Boolean).join("\n"));
+      setNotice("Trusted contact removed successfully.");
     } catch (err) {
-      setError(getError(err));
+      setError(getErrorMessage(err));
     } finally {
-      setJourneyLoading(false);
+      setDeletingId(null);
     }
   };
 
-  const resetJourney = () => {
-    setRoutes([]);
-    setSelectedRoute(null);
-    setOriginPoint(null);
-    setDestinationPoint(null);
-    setJourneyStatus("idle");
-    setStart("");
-    setDestination("");
-    setNotice("");
-    setError("");
-  };
-
-  const formatDistance = (value) =>
-    value != null ? `${value} km` : "Unavailable";
-
-  const formatDuration = (value) =>
-    value != null ? `${value} min` : "Unavailable";
-
   return (
+<<<<<<< HEAD
+    <div className="mx-auto max-w-5xl space-y-6">
+      <section>
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-violet-100 p-3 text-violet-700">
+            <Users size={27} />
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-violet-700">
+              YOUR SAFETY NETWORK
+            </p>
+
+            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+              Trusted Contacts
+            </h1>
+          </div>
+        </div>
+
+        <p className="mt-4 max-w-2xl text-slate-500">
+          Manage the people you trust in an emergency. SaheliShield
+          uses their saved email addresses for SOS alerts. Keep their
+          phone numbers available for contact purposes and always
+          obtain their consent before adding them.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-emerald-50 p-3 text-emerald-700">
+              <HeartHandshake size={22} />
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-slate-900">
+                Your trusted people
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                {loading
+                  ? "Loading contacts..."
+                  : `${contacts.length} ${
+                      contacts.length === 1 ? "contact" : "contacts"
+                    } saved`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={loadContacts}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <RefreshCw
+                size={16}
+                className={loading ? "animate-spin" : ""}
+              />
+              Refresh
+            </button>
+
+            <button
+              type="button"
+              onClick={openAddForm}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-800"
+            >
+              <UserPlus size={17} />
+              Add contact
+=======
     <div className="mx-auto max-w-6xl space-y-6 font-sans-ui">
       <section>
         <div className="flex items-center gap-3">
@@ -644,18 +406,107 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
                 <Navigation size={17} />
               )}
               {loading ? "Finding routes..." : "Find routes"}
+>>>>>>> ashish
             </button>
-          </form>
+          </div>
+        </div>
 
+<<<<<<< HEAD
+        {error && (
+          <div
+            role="alert"
+            className="mt-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          >
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {notice && (
+          <div
+            role="status"
+            className="mt-5 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+          >
+            <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+            <span>{notice}</span>
+          </div>
+        )}
+
+        {formOpen && (
+          <form
+            onSubmit={handleSubmit}
+            className="mt-6 space-y-4 rounded-xl border border-violet-200 bg-violet-50/40 p-4 sm:p-5"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-semibold text-slate-900">
+                {editingId ? "Edit trusted contact" : "Add trusted contact"}
+              </h3>
+
+              <button
+                type="button"
+                onClick={closeForm}
+                disabled={saving}
+                aria-label="Close form"
+                className="rounded-lg p-2 text-slate-500 hover:bg-white disabled:opacity-50"
+              >
+                <X size={19} />
+              </button>
+=======
           {error && (
             <div
               role="alert"
               className="mt-4 rounded-2xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 p-3.5 text-xs font-bold leading-5 text-red-700 dark:text-red-300"
             >
               {error}
+>>>>>>> ashish
             </div>
-          )}
 
+<<<<<<< HEAD
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="contact-name"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Full name
+                </label>
+
+                <input
+                  id="contact-name"
+                  name="name"
+                  value={form.name}
+                  onChange={updateField}
+                  maxLength={80}
+                  autoComplete="name"
+                  required
+                  placeholder="Enter contact name"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="contact-phone"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Phone number
+                </label>
+
+                <input
+                  id="contact-phone"
+                  name="phone"
+                  type="tel"
+                  value={form.phone}
+                  onChange={updateField}
+                  autoComplete="tel"
+                  required
+                  placeholder="+919876543210"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
+                />
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Include the country code.
+=======
           {notice && (
             <p
               role="status"
@@ -832,10 +683,31 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
                     : journeyStatus === "completed"
                       ? "Journey completed"
                       : "No active journey"}
+>>>>>>> ashish
                 </p>
               </div>
-            </div>
 
+<<<<<<< HEAD
+              <div>
+                <label
+                  htmlFor="contact-email"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Email address
+                </label>
+
+                <input
+                  id="contact-email"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={updateField}
+                  autoComplete="email"
+                  maxLength={254}
+                  required
+                  placeholder="trustedperson@example.com"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
+=======
             {journeyStatus === "active" && (
               <div className="mt-4 space-y-3">
                 <button
@@ -917,12 +789,200 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
                 <AlertTriangle
                   className="mt-0.5 shrink-0 text-amber-600"
                   size={14}
+>>>>>>> ashish
                 />
-                Sends an emergency email to your consented trusted contacts. Provider acceptance does not guarantee inbox delivery.
+
+                <p className="mt-1 text-xs text-slate-500">
+                  SOS alerts will be sent to this email address.
+                </p>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label
+                  htmlFor="contact-relationship"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Relationship (optional)
+                </label>
+
+                <input
+                  id="contact-relationship"
+                  name="relationship"
+                  value={form.relationship}
+                  onChange={updateField}
+                  maxLength={60}
+                  placeholder="e.g. Parent, friend, sibling"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 outline-none focus:border-violet-500"
+                />
+              </div>
+            </div>
+
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3">
+              <input
+                type="checkbox"
+                name="consentGiven"
+                checked={form.consentGiven}
+                onChange={updateField}
+                required
+                className="mt-1 h-4 w-4 accent-violet-700"
+              />
+
+              <span className="text-sm leading-6 text-slate-700">
+                This person has agreed to be my trusted contact and to
+                receive safety alerts when needed.
+              </span>
+            </label>
+
+            {formError && (
+              <p role="alert" className="text-sm text-red-700">
+                {formError}
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-700 px-5 py-3 text-sm font-semibold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving && (
+                  <RefreshCw size={16} className="animate-spin" />
+                )}
+
+                {saving
+                  ? "Saving..."
+                  : editingId
+                    ? "Save changes"
+                    : "Save contact"}
+              </button>
+
+              <button
+                type="button"
+                onClick={closeForm}
+                disabled={saving}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="mt-6 space-y-3">
+          {loading && (
+            <div className="py-10 text-center text-slate-500">
+              <RefreshCw
+                size={25}
+                className="mx-auto animate-spin"
+              />
+              <p className="mt-3 text-sm">
+                Loading your saved contacts...
               </p>
             </div>
-          </section>
+          )}
 
+<<<<<<< HEAD
+          {!loading && !error && contacts.length === 0 && (
+            <div className="rounded-xl border border-dashed border-slate-300 py-10 text-center">
+              <Users size={32} className="mx-auto text-slate-400" />
+
+              <h3 className="mt-3 font-semibold text-slate-800">
+                No trusted contacts yet
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Add someone you trust to receive your email SOS alerts.
+              </p>
+            </div>
+          )}
+
+          {!loading &&
+            contacts.map((contact) => {
+              const id = contact._id || contact.id;
+              const hasConsent = Boolean(contact.consentGiven);
+
+              return (
+                <article
+                  key={id}
+                  className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center"
+                >
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="rounded-full bg-violet-100 p-3 text-violet-700">
+                      <Users size={21} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="break-words font-semibold text-slate-900">
+                          {contact.name || "Unnamed contact"}
+                        </h3>
+
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            hasConsent
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-amber-50 text-amber-700"
+                          }`}
+                        >
+                          {hasConsent
+                            ? "Consent recorded"
+                            : "Consent not recorded"}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 flex items-center gap-2 break-all text-sm text-slate-600">
+                        <Phone size={15} className="shrink-0" />
+                        {contact.phone || "No phone number"}
+                      </p>
+
+                      <p className="mt-2 flex items-center gap-2 break-all text-sm text-slate-600">
+                        <Mail size={15} className="shrink-0" />
+                        {contact.email || "No email address saved"}
+                      </p>
+
+                      {contact.relationship && (
+                        <p className="mt-2 text-sm text-slate-500">
+                          Relationship: {contact.relationship}
+                        </p>
+                      )}
+
+                      <p className="mt-2 flex items-center gap-1 text-xs text-slate-500">
+                        <ShieldCheck size={14} />
+                        Email SOS recipient
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 gap-2 sm:flex-col">
+                    <button
+                      type="button"
+                      onClick={() => openEditForm(contact)}
+                      disabled={Boolean(deletingId)}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      <Pencil size={15} />
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(contact)}
+                      disabled={deletingId === id}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {deletingId === id ? (
+                        <RefreshCw size={15} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={15} />
+                      )}
+
+                      {deletingId === id ? "Removing..." : "Remove"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+=======
           {feedbackContext && journeyStatus !== "active" && (
             <section className="rounded-3xl border border-[#E8D7DC] dark:border-[#253146] bg-white dark:bg-[#161D2B] p-5 shadow-xs">
               <div className="mb-2 flex items-center gap-2">
@@ -980,8 +1040,9 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
           {feedbackContext && journeyStatus === "active" && (
             <p className="rounded-2xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] p-4 text-xs text-[#6B7280] dark:text-[#94A3B8]">Feedback will be available after you complete your current journey.</p>
           )}
+>>>>>>> ashish
         </div>
-      </div>
+      </section>
     </div>
   );
 }
