@@ -1,14 +1,32 @@
-
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  color: #172033;
-  background: #f7f8fc;
+  font-family: 'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #111318;
+  background-color: #FFF9F5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+:root.dark, html.dark {
+  color: #F1F5F9;
+  background-color: #0B0E14;
+}
+
+.font-serif-editorial {
+  font-family: 'DM Serif Display', Georgia, serif;
+}
+
+.font-sans-ui {
+  font-family: 'Plus Jakarta Sans', Inter, -apple-system, sans-serif;
 }
 
 * {
@@ -19,6 +37,33 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
+  background-color: #FFF9F5;
+  color: #111318;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.35s ease;
+}
+
+html.dark body {
+  background-color: #0B0E14;
+  color: #F1F5F9;
+}
+
+/* Silky smooth cross-fade when toggling between dark and light mode */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              fill 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.45s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition-delay: 0s !important;
+}
+
+header, section, footer, main, nav {
+  transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease;
 }
 
 button, input, textarea, select {
@@ -27,4 +72,103 @@ button, input, textarea, select {
 
 button {
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+a {
+  transition: color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Glassmorphism primitives */
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid #EAD9DF;
+}
+
+/* Floating micro-animations */
+@keyframes floatSubtle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: floatSubtle 6s ease-in-out infinite;
+}
+
+@keyframes pulseNeon {
+  0%, 100% {
+    opacity: 0.6;
+    filter: drop-shadow(0 0 8px rgba(243, 111, 130, 0.4));
+  }
+  50% {
+    opacity: 0.95;
+    filter: drop-shadow(0 0 16px rgba(243, 111, 130, 0.75));
+  }
+}
+
+.animate-pulse-neon {
+  animation: pulseNeon 4s ease-in-out infinite;
+}
+
+/* Cyber Scan Laser Beam */
+@keyframes scanBeam {
+  0% {
+    top: 5%;
+    opacity: 0.9;
+  }
+  50% {
+    top: 85%;
+    opacity: 1;
+  }
+  100% {
+    top: 5%;
+    opacity: 0.9;
+  }
+}
+
+.animate-scan-beam {
+  animation: scanBeam 3s ease-in-out infinite;
+}
+
+/* Route Dash Animation */
+@keyframes routeDash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.animate-route-dash {
+  animation: routeDash 1.8s linear infinite;
+}
+
+/* Radar Ping Animation */
+@keyframes radarPing {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+  80%, 100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.animate-radar-ping {
+  animation: radarPing 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Scrollbar suppression utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

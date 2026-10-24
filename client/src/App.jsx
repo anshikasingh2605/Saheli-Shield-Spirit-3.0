@@ -8,6 +8,8 @@ import {
   Navigation,
   ScanSearch,
   Users,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 import api from "./services/api";
@@ -19,6 +21,7 @@ import TrustedContacts from "./pages/TrustedContacts";
 import ActivityHistory from "./pages/ActivityHistory";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import Landing from "./pages/Landing";
 
 const VALID_PAGES = ["dashboard", "route", "scam", "contacts", "history", "settings"];
 
@@ -37,6 +40,46 @@ function getInitialPage() {
 export default function App() {
   const [page, setPage] = useState(getInitialPage);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      return localStorage.getItem("sahelishield_theme") === "dark";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (darkMode) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    } catch {}
+  }, [darkMode]);
+
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    try {
+      document.documentElement.classList.add("theme-transition");
+    } catch {}
+    setDarkMode(next);
+    try {
+      if (next) {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("sahelishield_theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("sahelishield_theme", "light");
+      }
+    } catch {}
+    window.setTimeout(() => {
+      try {
+        document.documentElement.classList.remove("theme-transition");
+      } catch {}
+    }, 500);
+  };
   const [routeParams, setRouteParams] = useState(() => {
     try {
       const saved = sessionStorage.getItem("sahelishield_route_params");
@@ -231,16 +274,17 @@ export default function App() {
   // Don't display the dashboard while the token is being checked.
   if (authStatus === "checking") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <ShieldCheck
-            size={42}
-            className="mx-auto mb-4 text-violet-700"
+      <div className="flex min-h-screen items-center justify-center bg-[#FFF9F5] dark:bg-[#0B0E14] text-[#111318] dark:text-[#F1F5F9] font-sans-ui transition-colors">
+        <div className="text-center p-6">
+          <img
+            src="/logo.png"
+            alt="SaheliShield"
+            className="mx-auto mb-4 h-12 w-12 rounded-xl object-contain shadow-md ring-1 ring-[#7E0E32]/20 dark:ring-white/10 animate-pulse"
           />
-          <p className="font-semibold text-slate-900">
+          <p className="font-serif-editorial text-2xl font-bold tracking-tight text-[#111318] dark:text-[#F8FAFC]">
             Verifying your session...
           </p>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-[#6B7280] dark:text-[#94A3B8]">
             Please wait while we check your account.
           </p>
         </div>
@@ -251,25 +295,26 @@ export default function App() {
   // A temporary network/server error should allow retrying.
   if (authStatus === "error") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-5">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <ShieldCheck
-            size={40}
-            className="mx-auto mb-4 text-violet-700"
+      <div className="flex min-h-screen items-center justify-center bg-[#FFF9F5] dark:bg-[#0B0E14] text-[#111318] dark:text-[#F1F5F9] font-sans-ui p-5 transition-colors">
+        <div className="w-full max-w-md rounded-3xl border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] p-8 text-center shadow-xl">
+          <img
+            src="/logo.png"
+            alt="SaheliShield"
+            className="mx-auto mb-4 h-12 w-12 rounded-xl object-contain shadow-md"
           />
 
-          <h1 className="text-xl font-bold text-slate-900">
+          <h1 className="font-serif-editorial text-2xl font-bold tracking-tight text-[#111318] dark:text-[#F8FAFC]">
             Unable to verify your session
           </h1>
 
-          <p className="mt-3 text-sm leading-6 text-slate-600">
+          <p className="mt-3 text-sm leading-6 text-[#6B7280] dark:text-[#94A3B8]">
             {authError}
           </p>
 
           <button
             type="button"
             onClick={verifySession}
-            className="mt-6 w-full rounded-xl bg-violet-700 px-4 py-3 font-semibold text-white hover:bg-violet-800"
+            className="mt-6 w-full rounded-2xl bg-[#7E0E32] hover:bg-[#5D0A24] dark:bg-[#9B123E] dark:hover:bg-[#7E0E32] px-4 py-3 font-bold text-white shadow-md shadow-[#7E0E32]/20 transition active:scale-95 cursor-pointer"
           >
             Try again
           </button>
@@ -277,7 +322,7 @@ export default function App() {
           <button
             type="button"
             onClick={handleLogout}
-            className="mt-3 w-full rounded-xl border border-slate-200 px-4 py-3 font-medium text-slate-700 hover:bg-slate-50"
+            className="mt-3 w-full rounded-2xl border border-[#DEC4CB] dark:border-[#253146] px-4 py-3 font-semibold text-[#111318] dark:text-[#F1F5F9] hover:bg-[#FFF9F5] dark:hover:bg-[#1E293B] transition cursor-pointer"
           >
             Sign out
           </button>
@@ -287,11 +332,20 @@ export default function App() {
   }
 
   if (authStatus !== "authenticated" || !user) {
-    return <Auth onLogin={handleLogin} />;
+    if (showAuthModal) {
+      return (
+        <Auth
+          onLogin={handleLogin}
+          onBack={() => setShowAuthModal(false)}
+        />
+      );
+    }
+
+    return <Landing onGetStarted={() => setShowAuthModal(true)} />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#FFF9F5] dark:bg-[#0B0E14] text-[#111318] dark:text-[#F1F5F9] font-sans-ui transition-colors duration-200">
       <Sidebar
         page={page}
         setPage={navigateTo}
@@ -301,14 +355,14 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      <div className="min-h-screen">
-        <header className="sticky top-0 z-30 flex h-16 sm:h-[72px] items-center justify-between border-b border-slate-200/90 bg-white/95 px-3 sm:px-6 backdrop-blur-md">
+      <div className="min-h-screen flex flex-col">
+        <header className="sticky top-0 z-30 flex h-16 sm:h-[72px] items-center justify-between border-b border-[#E8D7DC] dark:border-[#1E293B] bg-[#FFF9F5]/95 dark:bg-[#0B0E14]/95 px-3 sm:px-6 backdrop-blur-md transition-colors">
           {/* Left section: Hamburger button + Brand title */}
           <div className="flex items-center gap-2 sm:gap-3.5">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="rounded-xl border border-slate-200/90 p-1.5 sm:p-2 text-slate-700 shadow-xs transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none"
+              className="rounded-xl border border-[#DEC4CB] dark:border-[#253146] p-1.5 sm:p-2 text-[#111318] dark:text-[#F1F5F9] shadow-2xs transition hover:bg-white dark:hover:bg-[#1E293B] hover:border-[#7E0E32] dark:hover:border-[#FB7185] focus:outline-none cursor-pointer"
               aria-label="Open navigation menu"
               title="Open menu"
             >
@@ -318,18 +372,18 @@ export default function App() {
             <button
               type="button"
               onClick={() => navigateTo("dashboard")}
-              className="flex items-center gap-2 sm:gap-2.5 text-left transition hover:opacity-90"
+              className="flex items-center gap-2.5 sm:gap-3 text-left transition hover:opacity-90 group shrink-0 cursor-pointer"
             >
               <img
                 src="/logo.png"
                 alt="SaheliShield"
-                className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl object-contain shadow-sm ring-1 ring-purple-100 shrink-0"
+                className="h-8.5 w-8.5 sm:h-9.5 sm:w-9.5 rounded-xl object-contain shadow-xs ring-1 ring-[#7E0E32]/10 dark:ring-white/10 shrink-0 transition-transform duration-200 group-hover:scale-105"
               />
-              <div className="hidden lg:block">
-                <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900">
-                  SaheliShield
+              <div className="hidden sm:block">
+                <span className="font-serif-editorial text-lg sm:text-xl font-bold tracking-tight text-[#7E0E32] dark:text-[#FB7185] leading-none select-none">
+                  Saheli<span className="text-[#111318] dark:text-[#F1F5F9]">Shield</span>
                 </span>
-                <p className="text-[10px] text-purple-700 font-semibold tracking-wide uppercase">
+                <p className="text-[10px] text-[#7E0E32]/80 dark:text-[#FB7185]/80 font-bold tracking-wider uppercase leading-none mt-0.5">
                   Safety Platform
                 </p>
               </div>
@@ -337,17 +391,17 @@ export default function App() {
           </div>
 
           {/* Center Navigation Tabs: Responsive Segmented Capsule Control */}
-          <nav className="inline-flex items-center rounded-xl sm:rounded-2xl border border-slate-200/80 bg-slate-100/70 p-0.5 sm:p-1 backdrop-blur-xs">
+          <nav className="inline-flex items-center rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/80 dark:bg-[#161D2B]/80 p-1 shadow-2xs backdrop-blur-xs">
             <button
               type="button"
               onClick={() => navigateTo("route")}
-              className={`flex items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl px-2.5 sm:px-3.5 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold transition-all duration-200 ${
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
                 page === "route"
-                  ? "bg-white text-purple-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                  ? "bg-[#7E0E32] text-white shadow-xs"
+                  : "text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111318] dark:hover:text-[#F1F5F9] hover:bg-black/5 dark:hover:bg-white/5"
               }`}
             >
-              <Navigation size={14} className={page === "route" ? "text-purple-700" : "text-purple-600"} />
+              <Navigation size={13} className={page === "route" ? "text-white" : "text-[#7E0E32] dark:text-[#FB7185]"} />
               <span className="hidden sm:inline">SaheliRoute</span>
               <span className="sm:hidden">Route</span>
             </button>
@@ -355,68 +409,88 @@ export default function App() {
             <button
               type="button"
               onClick={() => navigateTo("scam")}
-              className={`flex items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl px-2.5 sm:px-3.5 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold transition-all duration-200 ${
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer ${
                 page === "scam"
-                  ? "bg-white text-emerald-900 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                  ? "bg-[#0D9488] text-white shadow-xs"
+                  : "text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111318] dark:hover:text-[#F1F5F9] hover:bg-black/5 dark:hover:bg-white/5"
               }`}
             >
-              <ScanSearch size={14} className={page === "scam" ? "text-emerald-700" : "text-emerald-600"} />
+              <ScanSearch size={13} className={page === "scam" ? "text-white" : "text-[#0D9488] dark:text-[#2DD4BF]"} />
               <span className="hidden sm:inline">ScamSaathi</span>
               <span className="sm:hidden">Scam</span>
             </button>
           </nav>
 
-          {/* Right Action Items: Contacts Icon + Notifications + User Avatar + Sign out */}
+          {/* Right Action Items: Contacts Icon + Theme Toggle + User Avatar + Sign out */}
           <div className="flex items-center gap-1.5 sm:gap-2.5">
             {/* Quick Contacts Icon Button */}
             <button
               type="button"
               onClick={() => navigateTo("contacts")}
-              className={`flex items-center gap-1.5 rounded-xl border p-1.5 sm:px-3 sm:py-1.5 text-xs font-semibold transition shadow-xs ${
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 sm:px-3.5 py-1.5 text-xs font-bold transition shadow-2xs cursor-pointer ${
                 page === "contacts"
-                  ? "border-purple-300 bg-purple-50 text-purple-800 ring-2 ring-purple-100"
-                  : "border-slate-200/90 bg-white text-slate-700 hover:border-purple-200 hover:bg-purple-50/50 hover:text-purple-800"
+                  ? "border-[#7E0E32] bg-[#7E0E32]/10 text-[#7E0E32] dark:border-[#FB7185] dark:bg-[#FB7185]/15 dark:text-[#FB7185]"
+                  : "border-[#DEC4CB] dark:border-[#253146] bg-white/90 dark:bg-[#161D2B] text-[#4B5563] dark:text-[#94A3B8] hover:border-[#7E0E32] dark:hover:border-[#FB7185] hover:text-[#111318] dark:hover:text-[#F1F5F9]"
               }`}
               title="Trusted Contacts"
               aria-label="Trusted Contacts"
             >
-              <Users size={16} className="text-purple-600" />
+              <Users size={14} className={page === "contacts" ? "text-[#7E0E32] dark:text-[#FB7185]" : "text-[#7E0E32] dark:text-[#FB7185]"} />
               <span className="hidden md:inline">Contacts</span>
             </button>
 
+            {/* Interactive Theme Toggle Switch */}
             <button
               type="button"
-              className="rounded-xl border border-slate-200/80 p-1.5 sm:p-2 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-              aria-label="Notifications"
+              onClick={toggleDarkMode}
+              className="flex items-center gap-1.5 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/90 dark:bg-[#161D2B] px-2.5 sm:px-3 py-1.5 text-xs font-bold shadow-2xs transition hover:border-[#7E0E32] dark:hover:border-[#FB7185] cursor-pointer"
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle Theme"
             >
-              <Bell size={16} />
+              <div
+                className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full transition-colors ${
+                  darkMode
+                    ? "bg-[#7E0E32] text-amber-300"
+                    : "bg-amber-100 text-amber-600"
+                }`}
+              >
+                {darkMode ? (
+                  <Moon size={12} className="fill-current text-amber-300" />
+                ) : (
+                  <Sun size={12} className="fill-current text-amber-500" />
+                )}
+              </div>
+              <span className="font-extrabold text-[#2D3748] dark:text-[#F1F5F9] text-xs hidden lg:inline">
+                {darkMode ? "Dark" : "Light"}
+              </span>
             </button>
 
-            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-xs sm:text-sm font-bold text-purple-800 ring-1 ring-purple-200/60">
+            {/* User Avatar */}
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#7E0E32] to-[#2D0B40] text-xs sm:text-sm font-bold text-white shadow-xs ring-1 ring-[#7E0E32]/30">
               {(user.name || user.fullName || user.email || "U")
                 .charAt(0)
                 .toUpperCase()}
             </div>
 
+            {/* Sign out */}
             <button
               type="button"
               onClick={handleLogout}
-              className="hidden md:flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
+              className="hidden md:flex items-center gap-1.5 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white/90 dark:bg-[#161D2B] px-3 py-1.5 text-xs font-bold text-[#4B5563] dark:text-[#94A3B8] hover:text-rose-600 hover:border-rose-300 transition cursor-pointer"
               title="Sign out"
             >
-              <LogOut size={14} />
+              <LogOut size={13} />
               <span>Sign out</span>
             </button>
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1440px] p-3.5 sm:p-6 lg:p-8">
+        <main className="mx-auto max-w-[1440px] w-full p-3.5 sm:p-6 lg:p-8 flex-1">
           {renderPage()}
         </main>
 
-        <footer className="px-8 pb-6 text-center text-xs text-slate-400">
-          <ShieldCheck className="mr-1 inline" size={14} />
+        <footer className="border-t border-[#E8D7DC] dark:border-[#1E293B] px-8 py-6 text-center text-xs text-[#6B7280] dark:text-[#64748B] transition-colors">
+          <ShieldCheck className="mr-1 inline text-[#7E0E32] dark:text-[#FB7185]" size={14} />
           SaheliShield · One shield for safety everywhere
         </footer>
       </div>
