@@ -873,6 +873,7 @@ export default function Landing({ onGetStarted }) {
                     onClick={() => setActiveFaq(isOpen ? null : index)}
                     className="flex w-full items-center justify-between p-5 text-left text-base font-extrabold text-[#111318] dark:text-[#F8FAFC] focus:outline-none cursor-pointer select-none transition-colors duration-200"
                     aria-expanded={isOpen}
+                    aria-controls={`faq-answer-${index}`}
                   >
                     <span className="pr-4">{item.q}</span>
                     <div
@@ -892,6 +893,7 @@ export default function Landing({ onGetStarted }) {
                   </button>
 
                   <div
+                    id={`faq-answer-${index}`}
                     className={`grid transition-all duration-300 ease-in-out ${
                       isOpen
                         ? "grid-rows-[1fr] opacity-100"
