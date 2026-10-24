@@ -338,7 +338,7 @@ export default function Landing({ onGetStarted }) {
               <button
                 type="button"
                 onClick={() => setDemoModalOpen(true)}
-                className="inline-flex items-center gap-2.5 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-7 py-3.5 text-sm sm:text-base font-bold text-[#181A20] dark:text-[#F1F5F9] shadow-xs hover:border-[#7E0E32]/50 hover:bg-[#FFF9F5] dark:hover:bg-[#1E293B] transition"
+                className="inline-flex items-center gap-2.5 rounded-full border border-[#DEC4CB] dark:border-[#253146] bg-white dark:bg-[#161D2B] px-7 py-3.5 text-sm sm:text-base font-bold text-[#181A20] dark:text-[#F1F5F9] shadow-xs hover:border-[#7E0E32]/50 hover:bg-[#FFF9F5] dark:hover:bg-[#1E293B] transition cursor-pointer"
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FCE7E8] dark:bg-rose-950/80 text-[#7E0E32] dark:text-[#FB7185]">
                   <Play size={13} className="fill-current ml-0.5" />
