@@ -501,29 +501,8 @@ export default function SaheliRoute({ initialStart = "", initialDestination = ""
     setError("");
     setNotice("");
     try {
-      const response = await api.post(`/journeys/${activeJourney._id}/sos`);
-      const result = response.data?.data;
-      const dispatches = Array.isArray(result?.dispatchDetails) ? result.dispatchDetails : [];
-      const sent = dispatches.filter((item) => item?.delivery?.sent === true).length;
-      const failed = dispatches.filter((item) => item?.delivery?.sent !== true).length;
-      const details = dispatches.map((item) => {
-        const recipient = item?.email || item?.phone || item?.name || "Trusted contact";
-        const delivery = item?.delivery || {};
-        if (delivery.sent === true) {
-          return `${recipient}: accepted by email provider; inbox delivery is not guaranteed.`;
-        }
-        return `${recipient}: email failed${delivery.error ? ` (${delivery.error})` : "."}`;
-      });
-
-      const summary = result?.notifiedContactsCount === 0 || dispatches.length === 0
-        ? "SOS request reached the server, but no email delivery results were returned. Check that you have saved trusted contacts with valid email addresses and consent."
-        : `SOS email processing finished: ${sent} accepted by the email provider, ${failed} failed. Provider acceptance does not guarantee inbox delivery.`;
-
-      setNotice([
-        summary,
-        result?.mapLink ? `Location link: ${result.mapLink}` : "No map link was returned by the server.",
-        ...details,
-      ].filter(Boolean).join("\n"));
+      await api.post(`/journeys/${activeJourney._id}/sos`);
+      // Intentionally do not display a success/response message in the page.
     } catch (err) {
       setError(getError(err));
     } finally {

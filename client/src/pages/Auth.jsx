@@ -56,6 +56,7 @@ function parseJwt(token) {
 
 export default function Auth({ onLogin, onBack }) {
   const [mode, setMode] = useState("login");
+  const isRegister = mode === "register";
   const [showPassword, setShowPassword] = useState(false);
 
   const [name, setName] = useState("");
@@ -271,8 +272,6 @@ export default function Auth({ onLogin, onBack }) {
       setGoogleLoading(false);
     }
   }
-
-  const isRegister = mode === "register";
 
   async function handleSubmit(event) {
     event.preventDefault();
